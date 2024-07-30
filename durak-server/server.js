@@ -6,35 +6,6 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-// const DISCORD_CLIENT_ID = "1253789860364550144"
-// const DISCORD_CLIENT_SECRET = "AbXBcGmWVQTgyC6jf39wPOrHuOBxWWFg"
-
-// // DISCORD ACTIVITY
-// app.post("/api/token", async (req, res) => {
-
-//   // Exchange the code for an access_token
-//   const response = await fetch(`https://discord.com/api/oauth2/token`, {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/x-www-form-urlencoded",
-//     },
-//     body: new URLSearchParams({
-//       client_id: DISCORD_CLIENT_ID,
-//       client_secret: DISCORD_CLIENT_SECRET,
-//       grant_type: "authorization_code",
-//       code: req.body.code,
-//     }),
-//   });
-
-//   // Retrieve the access_token from the response
-//   const { access_token } = await response.json();
-
-//   console.log(access_token)
-
-//   // Return the access_token to our client as { access_token: "..."}
-//   res.send({access_token});
-// });
-
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -45,7 +16,7 @@ const io = socketIo(server, {
 
 // Adding the deck to server.js
 const createDeck = require("./deck");
-
+ 
 // Array of players
 let players = [];
 var firstPlayer;

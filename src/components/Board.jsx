@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Card from "./Card";
-import { useSocket } from "../SocketContext";
-import { usePlayer } from "../PlayerContext";
+import { useSocket } from "../context/SocketContext";
+import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";

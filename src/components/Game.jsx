@@ -1,7 +1,7 @@
 // src/Chat.js (or create a new component like src/Game.js)
 import React, { useState, useEffect } from "react";
-import { useSocket } from "../SocketContext.js";
-import { usePlayer } from "../PlayerContext.js";
+import { useSocket } from "../context/SocketContext.js";
+import { usePlayer } from "../context/PlayerContext.js";
 import Board from "./Board.jsx";
 import LeaderBoard from "./LeaderBoard.jsx";
 
