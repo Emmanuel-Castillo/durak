@@ -9,7 +9,7 @@ app.use(cors());
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000", // Allow requests from this origin
+    origin: "https://durak-a6f8ab3ff9e1.herokuapp.com/", // Allow requests from this origin
     methods: ["GET", "POST"],
   },
 });
@@ -461,6 +461,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(4000, () => {
-  console.log("listening on *:4000");
+server.listen(process.env.PORT, () => {
+  console.log("listening on server");
 });
