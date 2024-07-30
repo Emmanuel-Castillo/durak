@@ -17,7 +17,8 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     
     // Create a socket connection to the server
-    const newSocket = io('https://durak-a6f8ab3ff9e1.herokuapp.com/');
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:4000';
+    const newSocket = io(serverURL);
     setSocket(newSocket);
 
     // Clean up the socket connection when the component unmounts
