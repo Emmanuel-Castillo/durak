@@ -6,6 +6,14 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, "../client/build")));
+
+// For any other route, serve the React app's index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/build", "index.html"));
+});
+
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
