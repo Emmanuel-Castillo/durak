@@ -1,0 +1,19 @@
+.app {
+  padding: 40px;
+}
+
+.app_title {
+  text-align: center;
+  text-decoration: underline;
+
+  width: 100%;
+}
+
+
+/* Select cards are highlighted */
+.selected {
+  scale: 1.25;
+
+}
+
+
