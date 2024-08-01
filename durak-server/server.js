@@ -128,7 +128,6 @@ function handCards() {
 // Assume all players are present before the game starts
 io.on("connection", (socket) => {
   console.log("user connected");
-  console.log(players)
   players.push({
     id: socket.id,
     name: "User #" + socket.id,
@@ -137,6 +136,7 @@ io.on("connection", (socket) => {
     nextPlayer: "",
     index: players.length,
   });
+  console.log(players)
 
   // Server receives 'startGame' signal from any client socket
   socket.on("startGame", () => {
@@ -266,6 +266,8 @@ io.on("connection", (socket) => {
 
       winners = [];
       io.emit("leaderBoard", winners);
+
+      console.log(players)
     }
   });
 
