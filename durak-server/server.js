@@ -470,7 +470,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", (socketId) => {
     players = players.filter((player) => player.id !== socketId);
     numAttackers = players.length - 1;
-    console.log("user disconnected");
+    console.log("user disconnected. players now: ", players);
   });
 });
 
