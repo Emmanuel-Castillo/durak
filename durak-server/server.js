@@ -140,9 +140,9 @@ io.on("connection", (socket) => {
   // Server receives 'startGame' signal from any client socket
   socket.on("startGame", () => {
     // Case if not enough players
-    if (players.length < 2 || players.length > 4)
-      console.log("Game must be played with 2-4 players.");
-    else {
+    // if (players.length < 2 || players.length > 4)
+      // console.log("Game must be played with 2-4 players.");
+    // else {
       // Send 'gameStarted' signal to each client so that their Board renders
       io.emit("gameStarted");
 
@@ -200,7 +200,8 @@ io.on("connection", (socket) => {
       winners = [];
       io.emit("leaderBoard", winners);
     }
-  });
+  // }
+);
 
   socket.on("nextGame", () => {
     if (winners.length < 2 || winners.length > 4)
