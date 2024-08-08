@@ -46,7 +46,7 @@ function Attacker({ attackingCards, counteredCards }) {
                 ) &&
                   attackingCards.length < maxCardsToFace)
               ) {
-                socket.emit("updateAttackingCards", attackingCards, card, 1);
+                socket.emit("updateAttackingCards", attackingCards, card, 1, player.name);
                 socket.emit("updateHand", player.id, card, -1);
               }
             }}
@@ -56,7 +56,7 @@ function Attacker({ attackingCards, counteredCards }) {
         ))}
       </div>
       {attackingCards.length === 0 && !pressedEndTurn && (
-        <button onClick={() => {socket.emit("endAttackerTurn")
+        <button onClick={() => {socket.emit("endAttackerTurn", player.name)
           setPressedEndTurn(true)
         }}>End Turn</button>
       )}

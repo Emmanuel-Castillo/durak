@@ -9,7 +9,7 @@ import Defender from "./Defender";
 function Board() {
   // Client socket that receives emitted signals from server
   const socket = useSocket();
-  const { player, setPlayer } = usePlayer();
+  const { player  } = usePlayer();
 
   // Deck information
   const [tsarCard, setTsarCard] = useState(null);
@@ -27,6 +27,8 @@ function Board() {
   const [numCardsDeck, setNumCardsDeck] = useState(36);
 
   useEffect(() => {
+    if (socket == null) return 
+    
     socket.on("attackingCards", (cards) => {
       setAttackingCards(cards);
     });
@@ -77,7 +79,7 @@ function Board() {
         }}
       >
         <h1>Countered Cards:</h1>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", flexDirection: "column", overflowY: "auto" }}>
           {counteredCards.map((cards, index) => {
             return (
               <div

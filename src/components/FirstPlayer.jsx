@@ -15,7 +15,7 @@ function FirstPlayer({ attackingCards }) {
           <div
             key={index}
             onClick={() => {
-              socket.emit("updateAttackingCards", attackingCards, card, 1);
+              socket.emit("updateAttackingCards", attackingCards, card, 1, player.name);
               socket.emit("updateHand", player.id, card, -1);
               socket.emit("updateRole", player.id, "attacker");
             }}
