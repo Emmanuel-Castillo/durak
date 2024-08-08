@@ -10,12 +10,18 @@ function FirstPlayer({ attackingCards }) {
   return (
     <div>
       <h2>FIRST PLAY! {player.name}, you're the attacker</h2>
-      <div style={{ display: "flex", flexDirection: "row" }}>
+      <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap" }}>
         {player.hand.map((card, index) => (
           <div
             key={index}
             onClick={() => {
-              socket.emit("updateAttackingCards", attackingCards, card, 1, player.name);
+              socket.emit(
+                "updateAttackingCards",
+                attackingCards,
+                card,
+                1,
+                player.name
+              );
               socket.emit("updateHand", player.id, card, -1);
               socket.emit("updateRole", player.id, "attacker");
             }}

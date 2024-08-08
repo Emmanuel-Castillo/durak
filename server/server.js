@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
-const path = require("path")
+const path = require("path");
 
 const app = express();
 app.use(cors());
@@ -11,21 +11,22 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "../build")));
 
 // For any other route, serve the React app's index.html
-app.get('*', (req, res) => {
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../build", "index.html"));
 });
 
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "https://durak-a6f8ab3ff9e1.herokuapp.com" || "http://localhost:3000", // Allow requests from this origin
+    origin:
+      "http://localhost:3000" || "https://durak-a6f8ab3ff9e1.herokuapp.com", // Allow requests from this origin
     methods: ["GET", "POST"],
   },
 });
 
 // Adding the deck to server.js
 const createDeck = require("./deck");
- 
+
 // Array of players
 let players = [];
 var firstPlayer;
@@ -65,7 +66,7 @@ function mapRoleInPlayers() {
 
     player.role = newRole;
     io.to(player.id).emit("changeRole", player.role);
-    io.emit("updateComments", `${player.name} is now the ${player.role}`)
+    io.emit("updateComments", `${player.name} is now the ${player.role}`);
     return player;
   });
 }
@@ -89,13 +90,6 @@ function handCards() {
     // Deck may not have 6+ cards left for each player, starting with firstPlayer
     // Must check if deck has reached zero, if so, return
     const playerCards = deck.slice(0, 6 - firstPlayerHandSize);
-    console.log(
-      "Handing first player ",
-      firstPlayer.name,
-      " ",
-      playerCards.length,
-      " cards"
-    );
     deck = deck.slice(6 - firstPlayerHandSize);
     firstPlayer.hand.push(...playerCards);
     io.to(firstPlayer.id).emit("changeHand", firstPlayer.hand);
@@ -106,7 +100,6 @@ function handCards() {
       const attackerHandSize = player.hand.length;
       if (attackerHandSize < 6) {
         const playerCards = deck.slice(0, 6 - attackerHandSize);
-        console.log("Handing", player.name, " ", playerCards.length, " cards");
         deck = deck.slice(6 - attackerHandSize);
         player.hand.push(...playerCards);
         io.to(player.id).emit("changeHand", player.hand);
@@ -117,7 +110,6 @@ function handCards() {
   const defenderHandSize = defender.hand.length;
   if (defenderHandSize < 6) {
     const playerCards = deck.slice(0, 6 - defenderHandSize);
-    console.log("Handing", defender.name, " ", playerCards.length, " cards");
     deck = deck.slice(6 - defenderHandSize);
     defender.hand.push(...playerCards);
     io.to(defender.id).emit("changeHand", defender.hand);
@@ -133,7 +125,10 @@ io.on("connection", (socket) => {
   socket.emit("updateComments", `Welcome User #${socket.id}!`);
 
   // Broadcast to everyone except the sender
-  socket.broadcast.emit("updateComments", `User #${socket.id} has joined the game!`);
+  socket.broadcast.emit(
+    "updateComments",
+    `User #${socket.id} has joined the game!`
+  );
 
   players.push({
     id: socket.id,
@@ -143,17 +138,21 @@ io.on("connection", (socket) => {
     nextPlayer: "",
     index: players.length,
   });
-  console.log(players)
+  console.log(players);
 
   // Server receives 'startGame' signal from any client socket
   socket.on("startGame", () => {
     // Case if not enough players
-    if (players.length < 2 || players.length > 4)
+    if (players.length < 2 || players.length > 4) {
       console.log("Game must be played with 2-4 players.");
-    else {
+      io.emit(
+        "updateComments",
+        `Game must be played with 2-4 players. Right now, there are currently ${players.length} players`
+      );
+    } else {
       // Send 'gameStarted' signal to each client so that their Board renders
       io.emit("gameStarted");
-      io.emit("updateComments", "Game has started!!!")
+      io.emit("updateComments", "Game has started!!!");
 
       // 1. Create and shuffle the deck
       deck = shuffleDeck(createDeck());
@@ -200,7 +199,7 @@ io.on("connection", (socket) => {
 
         player.nextPlayer = players[(index + 1) % players.length].id;
         io.to(player.id).emit("startingStats", player);
-        io.emit("updateComments", `${player.name} is the ${player.role}`)
+        io.emit("updateComments", `${player.name} is the ${player.role}`);
       });
 
       numAttackers = players.length - 1;
@@ -210,41 +209,45 @@ io.on("connection", (socket) => {
       winners = [];
       io.emit("leaderBoard", winners);
     }
-  }
-);
+  });
 
   socket.on("nextGame", () => {
-    if (winners.length < 2 || winners.length > 4)
+    if (winners.length < 2 || winners.length > 4){
       console.log("Game must be played with 2-4 players.");
+      io.emit(
+        "updateComments",
+        `Game must be played with 2-4 players. Right now, there are currently ${players.length} players`
+      );
+    }
     else {
       // Send 'gameStarted' signal to each client so that their Board renders
       io.emit("gameStarted");
-      io.emit("updateComments", "Next game is beginning...")
-      
+      io.emit("updateComments", "Next game is beginning...");
+
       // 1. Create and shuffle the deck
       deck = shuffleDeck(createDeck());
-      
+
       players = winners.sort((a, b) => {
         if (a.index < b.index) return -1;
       });
-      
+
       // 2. Deal 6 cards to the connected player
       players.forEach((player) => {
         const playerCards = deck.slice(0, 6);
         player.hand = playerCards;
         deck = deck.slice(6);
       });
-      
+
       // 3. Tsarcard & tsar suit determined
       const tsarCard = deck.pop();
       io.emit("tsarCard", tsarCard);
-      
+
       // 4. Place tsarcard at bottom of deck
       deck.push(tsarCard);
-      
+
       // Find the index of the player with the role "durak"
       const durakIndex = players.findIndex((player) => player.role === "durak");
-      
+
       // Update the roles
       players.forEach((player, index) => {
         if (index === durakIndex) {
@@ -259,43 +262,47 @@ io.on("connection", (socket) => {
         } else {
           player.role = "attacker";
         }
-        
+
         player.nextPlayer = players[(index + 1) % players.length].id;
         io.to(player.id).emit("startingStats", player);
-        io.emit("updateComments", `${player.name} is the ${player.role}`)
+        io.emit("updateComments", `${player.name} is the ${player.role}`);
       });
-      
+
       numAttackers = players.length - 1;
       io.emit("resetStates");
       io.emit("numCardsDeck", deck.length);
 
       winners = [];
       io.emit("leaderBoard", winners);
-
-      console.log(players)
     }
   });
 
   // Emits signal to all clients to perform operation with card onto attackingCards state array depending on operation
-  socket.on("updateAttackingCards", (attackingCards, card, operation, sender) => {
-    // Check if number of attacking cards <= defenders hand length or 6
-    // If adding card
-    if (operation === 1) {
-      const defenderHandSize = defender.hand.length;
-      const atkCardLimit = defenderHandSize < 6 ? defenderHandSize : 6;
-      if (attackingCards.length < atkCardLimit) {
-        attackingCards.push(card);
-        io.emit("updateComments", `${sender} has dealt the ${card.value} of ${card.suit}`)
+  socket.on(
+    "updateAttackingCards",
+    (attackingCards, card, operation, sender) => {
+      // Check if number of attacking cards <= defenders hand length or 6
+      // If adding card
+      if (operation === 1) {
+        const defenderHandSize = defender.hand.length;
+        const atkCardLimit = defenderHandSize < 6 ? defenderHandSize : 6;
+        if (attackingCards.length < atkCardLimit) {
+          attackingCards.push(card);
+          io.emit(
+            "updateComments",
+            `${sender} has dealt the ${card.value} of ${card.suit}`
+          );
+        }
+      } else if (operation === -1) {
+        attackingCards = attackingCards.filter(
+          (c) => c.rank !== card.rank || c.suit !== card.suit
+        );
+      } else if (operation === 0) {
+        attackingCards = [];
       }
-    } else if (operation === -1) {
-      attackingCards = attackingCards.filter(
-        (c) => c.rank !== card.rank || c.suit !== card.suit
-      );
-    } else if (operation === 0) {
-      attackingCards = [];
+      io.emit("attackingCards", attackingCards);
     }
-    io.emit("attackingCards", attackingCards);
-  });
+  );
 
   // Emits signal to clients to add both cards as one object in the counteredCards state array
   socket.on(
@@ -303,7 +310,10 @@ io.on("connection", (socket) => {
     (counteredCards, attackerCard, defenderCard, operation) => {
       if (operation === 1) {
         counteredCards.push({ attackerCard, defenderCard });
-        io.emit("updateComments", `${defender.name} has countered with the ${defenderCard.value} of ${defenderCard.suit}!`)
+        io.emit(
+          "updateComments",
+          `${defender.name} has countered with the ${defenderCard.value} of ${defenderCard.suit}!`
+        );
       } else if (operation === 0) {
         counteredCards = [];
       }
@@ -318,26 +328,29 @@ io.on("connection", (socket) => {
       (player) => player.nextPlayer === winner.id
     );
     prevPlayer.nextPlayer = winner.nextPlayer;
-    
+
     io.to(winner.id).emit("changeRole", "winner");
-    io.emit("updateComments", `${winner.name} has exited the game!`)
+    io.emit("updateComments", `${winner.name} has exited the game!`);
     winners.push(winner);
     io.emit("leaderBoard", winners);
-    
+
     players = players.filter((player) => player.id !== winner.id);
-    numAttackers = players.length - 1
-    
+    numAttackers = players.length - 1;
+
     if (winner.role === "defender") {
       firstPlayer = players.find((player) => player.id === winner.nextPlayer);
       mapRoleInPlayers();
       io.emit("resetStates");
     }
-    
+
     if (players.length === 1) {
       const durak = players[0];
       durak.role = "durak";
       io.to(durak.id).emit("changeRole", "durak");
-      io.emit("updateComments", `${durak.name} is the durak! Game has ended...`)
+      io.emit(
+        "updateComments",
+        `${durak.name} is the durak! Game has ended...`
+      );
       winners.push(durak);
       io.emit("leaderBoard", winners);
       players = [];
@@ -399,10 +412,10 @@ io.on("connection", (socket) => {
     if (!name) return;
     players = players.map((player) => {
       if (player.id === socketId) {
-        const temp = player.name
+        const temp = player.name;
         player.name = name;
         io.to(socketId).emit("changeName", player.name);
-        io.emit("updateComments", `${temp} is now ${player.name}!`)
+        io.emit("updateComments", `${temp} is now ${player.name}!`);
       }
       return player;
     });
@@ -433,7 +446,10 @@ io.on("connection", (socket) => {
         player.role = "attacker";
         io.to(socketId).emit("changeRole", player.role);
       } else if (player.id === nextDefender.id) {
-        io.emit("updateComments", `${defender.name} has passed the cards to ${player.name}!`)
+        io.emit(
+          "updateComments",
+          `${defender.name} has passed the cards to ${player.name}!`
+        );
         player.role = "defender";
         io.to(player.id).emit("changeRole", player.role);
         defender = nextDefender;
@@ -446,7 +462,10 @@ io.on("connection", (socket) => {
   // Also considered end of turn, so reset states for all clients
   socket.on("failedDefense", () => {
     // All players with < 6 cards must draw from deck until they have 6 again
-    io.emit("updateComments", `${defender.name} has failed their defense! Beginning next turn...`)
+    io.emit(
+      "updateComments",
+      `${defender.name} has failed their defense! Beginning next turn...`
+    );
     handCards();
 
     firstPlayer = players.find((player) => player.id === defender.nextPlayer);
@@ -460,11 +479,11 @@ io.on("connection", (socket) => {
   // Keep count of all attackers; they all need to emit this signal for the turn to end
   socket.on("endAttackerTurn", (player) => {
     numAttackers--;
-    io.emit("updateComments", `${player} has ended their turn...`)
+    io.emit("updateComments", `${player} has ended their turn...`);
     if (numAttackers === 0) {
       // All players with < 6 cards must draw from deck until they have 6 again
       // In sequential order: firstPlayer, attackers, defender
-      io.emit("updateComments", "Turn has ended! Beginning next turn...")
+      io.emit("updateComments", "Turn has ended! Beginning next turn...");
       handCards();
 
       // Assign current defender as next first player
@@ -479,9 +498,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (sender, message) => {
-    const player = players.find((player) => player.id === sender)
-    io.emit("updateComments", `[${player.name}]: ${message}`)
-  })
+    const player = players.find((player) => player.id === sender);
+    io.emit("updateComments", `[${player.name}]: ${message}`);
+  });
 
   socket.on("disconnect", () => {
     players = players.filter((player) => player.id !== socket.id);
@@ -489,6 +508,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(process.env.PORT || 4000  , () => {
+server.listen(4000 || process.env.PORT, () => {
   console.log("listening on server");
 });

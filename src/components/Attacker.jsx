@@ -28,7 +28,7 @@ function Attacker({ attackingCards, counteredCards }) {
   return (
     <div>
       <h2>{player.name}, you're the attacker!</h2>
-      <div style={{ display: "flex", flexDirection: "row" }}>
+      <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap" }}>
         {player.hand.map((card, index) => (
           <div
             key={index}

@@ -129,6 +129,7 @@ function Defender({
         style={{
           display: "flex",
           flexDirection: "row",
+          flexWrap: "wrap"
         }}
       >
         {player.hand.map((card, index) => (
