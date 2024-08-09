@@ -235,6 +235,10 @@ io.on("connection", (socket) => {
       players = winners.sort((a, b) => {
         if (a.index < b.index) return -1;
       });
+      const playersNames = players.map((player) => {
+        return player.name
+      })
+      io.emit("updatePlayers", playersNames)
 
       // 2. Deal 6 cards to the connected player
       players.forEach((player) => {
