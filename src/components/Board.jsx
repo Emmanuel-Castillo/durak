@@ -5,6 +5,7 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
+import EventCommenter from "./EventCommenter";
 
 function Board() {
   // Client socket that receives emitted signals from server
@@ -66,18 +67,16 @@ function Board() {
   // Renders all countered cards made by defender to all clients
   function showCounteredCards() {
     return (
-      <div
-        style={{
-          border: "1px solid black",
-          width: "25%",
-          padding: "8px",
-          position: "absolute",
-          top: 0,
-          right: 0,
-        }}
-      >
-        <h1>Countered Cards:</h1>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+      <>
+        <h2 style={{ margin: 0, padding: 8 }}>Countered Cards:</h2>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            padding: 8,
+            overflowY: "auto",
+          }}
+        >
           {counteredCards.map((cards, index) => {
             return (
               <div
@@ -94,7 +93,7 @@ function Board() {
             );
           })}
         </div>
-      </div>
+      </>
     );
   }
 
@@ -150,6 +149,7 @@ function Board() {
           border: "1px solid black",
           padding: "8px",
           position: "relative",
+          height: "100%",
         }}
       >
         <div style={{ display: "flex" }}>
@@ -178,7 +178,14 @@ function Board() {
         </div>
         <div>
           <h2>Attacking Cards:</h2>
-          <div style={{ display: "flex", flexDirection: "row" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              width: "60%",
+              flexWrap: "wrap",
+            }}
+          >
             {attackingCards.map((card, index) => (
               <div
                 key={index}
@@ -194,11 +201,38 @@ function Board() {
           </div>
         </div>
         {renderHand()}
-        {counteredCards.length > 0 && showCounteredCards()}
+        {(player.role !== "winner" || player.role !== "durak") && (
+          <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+        )}
+
+        <div
+          style={{
+            borderLeft: "1px solid black",
+            width: "25%",
+            height: "50%",
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+          }}
+        >
+          {showCounteredCards()}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            borderLeft: "1px solid black",
+            borderBottom: "1px solid black",
+            width: "25%",
+            height: "50%",
+            position: "absolute",
+            top: 0,
+            right: 0,
+          }}
+        >
+          <EventCommenter />
+        </div>
       </div>
-      {(player.role !== "winner" || player.role !== "durak") && (
-        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
-      )}
     </div>
   );
 }

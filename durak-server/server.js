@@ -18,7 +18,8 @@ app.get('*', (req, res) => {
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "https://durak-a6f8ab3ff9e1.herokuapp.com", // Allow requests from this origin
+    origin: "http://localhost:3000",
+    // origin: "https://durak-a6f8ab3ff9e1.herokuapp.com", // aAllow requests from this origin
     methods: ["GET", "POST"],
   },
 });
@@ -47,6 +48,7 @@ function shuffleDeck(deck) {
     deck[i] = deck[j];
     deck[j] = temp;
   }
+  io.emit("addComment", "Shuffling deck...")
   return deck;
 }
 
@@ -127,7 +129,6 @@ function handCards() {
 
 // Assume all players are present before the game starts
 io.on("connection", (socket) => {
-  console.log("user connected");
   players.push({
     id: socket.id,
     name: "User #" + socket.id,
@@ -136,34 +137,34 @@ io.on("connection", (socket) => {
     nextPlayer: "",
     index: players.length,
   });
-  console.log(players)
+  console.log("user connected to players: ", players);
 
   // Server receives 'startGame' signal from any client socket
   socket.on("startGame", () => {
     // Case if not enough players
-    // if (players.length < 2 || players.length > 4)
-      // console.log("Game must be played with 2-4 players.");
-    // else {
+    if (players.length < 2 || players.length > 4)
+      console.log("Game must be played with 2-4 players.");
+    else {
       // Send 'gameStarted' signal to each client so that their Board renders
       io.emit("gameStarted");
-
+      
       // 1. Create and shuffle the deck
       deck = shuffleDeck(createDeck());
-
+      
       // 2. Deal 6 cards to the connected player
       players.forEach((player) => {
         const playerCards = deck.slice(0, 6);
         player.hand = playerCards;
         deck = deck.slice(6);
       });
-
+      
       // 3. Tsarcard & tsar suit determined
       const tsarCard = deck.pop();
       io.emit("tsarCard", tsarCard);
-
+      
       // 4. Place tsarcard at bottom of deck
       deck.push(tsarCard);
-
+      
       // 5. Choose starting defender (first game)
       // Find player with lowest card of tsar suit in hand
       var maxRank = 14;
@@ -178,7 +179,7 @@ io.on("connection", (socket) => {
           }
         });
       });
-
+      
       players.forEach((player, index) => {
         if (index === firstPlayerIndex) {
           player.role = "firstPlayer";
@@ -189,9 +190,10 @@ io.on("connection", (socket) => {
         } else {
           player.role = "attacker";
         }
-
+        
         player.nextPlayer = players[(index + 1) % players.length].id;
         io.to(player.id).emit("startingStats", player);
+        io.emit("addComment", `${player.name} is the ${player.role}`)
       });
 
       numAttackers = players.length - 1;
@@ -200,8 +202,10 @@ io.on("connection", (socket) => {
 
       winners = [];
       io.emit("leaderBoard", winners);
+
+      console.log("game started. players are: ", players)
     }
-  // }
+  }
 );
 
   socket.on("nextGame", () => {
@@ -475,5 +479,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(process.env.PORT || 4000, () => {
-  console.log("listening on server");
+  console.log("listening to server");
 });
