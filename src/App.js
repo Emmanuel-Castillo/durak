@@ -1,13 +1,67 @@
 // src/App.js
-import React from 'react';
-import Game from './components/Game';
-import "./css/App.css"
+import React, { useEffect, useState } from "react";
+import Game from "./components/Game";
+import "./css/App.css";
+import Commenter from "./components/Commenter";
+import { useSocket } from "./context/SocketContext";
 
 const App = () => {
+  const socket = useSocket();
+  const [name, setName] = useState();
+  const [players, setPlayers] = useState([]);
+
+  useEffect(() => {
+    if (!socket) return
+
+    socket.on("updatePlayers", (players) => {
+      setPlayers(players);
+    });
+  }, [socket]);
+
   return (
-    <div className='app'>
-      <h1 className='app_title'>Durak</h1>
-      <Game/>
+    <div className="app">
+      <div style={{ display: "flex" }}>
+        <div style={{ width: "100%" }}>
+            <h1
+              style={{
+                fontSize: 70,
+                textAlign: "center",
+                textDecoration: "underline",
+              }}
+            >
+              Durak
+            </h1>
+            <form
+              style={{ display: "flex", justifyContent: "center" }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                socket.emit("updateName", socket.id, name);
+                setName("");
+              }}
+            >
+              <label style={{ marginRight: 4 }} htmlFor="name">
+                Enter Name:{" "}
+              </label>
+              <input
+                type="text"
+                value={name}
+                maxLength="10"
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button style={{ marginLeft: 8 }}>Submit</button>
+            </form>
+        </div>
+        <div style={{width: 400, border: "1px solid black", borderRight: "hidden", textAlign: "center"}}>
+          <p>Players:</p>
+          <hr/>
+          {players.map((player) => {
+            return <p>{player}</p>;
+          })}
+        </div>
+        <Commenter />
+      </div>
+      <hr />
+      <Game />
     </div>
   );
 };

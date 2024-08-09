@@ -5,12 +5,11 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
-import EventCommenter from "./EventCommenter";
 
 function Board() {
   // Client socket that receives emitted signals from server
   const socket = useSocket();
-  const { player, setPlayer } = usePlayer();
+  const { player } = usePlayer();
 
   // Deck information
   const [tsarCard, setTsarCard] = useState(null);
@@ -28,6 +27,8 @@ function Board() {
   const [numCardsDeck, setNumCardsDeck] = useState(36);
 
   useEffect(() => {
+    if (socket == null) return;
+
     socket.on("attackingCards", (cards) => {
       setAttackingCards(cards);
     });
@@ -67,13 +68,17 @@ function Board() {
   // Renders all countered cards made by defender to all clients
   function showCounteredCards() {
     return (
-      <>
-        <h2 style={{ margin: 0, padding: 8 }}>Countered Cards:</h2>
+      <div
+        style={{
+          borderLeft: "1px solid black",
+          padding: "8px",
+        }}
+      >
+        <h1>Countered Cards:</h1>
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            padding: 8,
             overflowY: "auto",
           }}
         >
@@ -93,7 +98,7 @@ function Board() {
             );
           })}
         </div>
-      </>
+      </div>
     );
   }
 
@@ -143,97 +148,61 @@ function Board() {
   // Render Board to all players
   // Renders appropriate hands to specifically assigned players
   return (
-    <div>
       <div
         style={{
           border: "1px solid black",
-          padding: "8px",
-          position: "relative",
-          height: "100%",
+          display: "flex",
         }}
       >
-        <div style={{ display: "flex" }}>
-          <div>
-            <h2>TsarCard:</h2>
-            <Card card={tsarCard} />
-          </div>
-          <div style={{ position: "relative", marginLeft: 40 }}>
-            <h2>Deck:</h2>
-            <img
-              src="../../assets/backside_card.jpg"
-              alt=""
-              style={{ margin: "0 10px", width: "100px", height: "145.20px" }}
-            />
-            <h1
-              style={{
-                position: "absolute",
-                top: 100,
-                left: 40,
-                color: "white",
-              }}
-            >
-              {numCardsDeck}
-            </h1>
-          </div>
-        </div>
-        <div>
-          <h2>Attacking Cards:</h2>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              width: "60%",
-              flexWrap: "wrap",
-            }}
-          >
-            {attackingCards.map((card, index) => (
-              <div
-                key={index}
-                //Card given CSS class 'selected' when set as attackerCard
-                className={attackerCard === card ? "selected" : ""}
-                onClick={() => {
-                  handleAttackerCardClick(card);
+        <div style={{ width: "100%", padding: 8 }}>
+          <div style={{ display: "flex" }}>
+            <div>
+              <h2>TsarCard:</h2>
+              <Card card={tsarCard} />
+            </div>
+            <div style={{ position: "relative", marginLeft: 40 }}>
+              <h2>Deck:</h2>
+              <img
+                src="../../assets/backside_card.jpg"
+                alt=""
+                style={{ margin: "0 10px", width: "100px", height: "145.20px" }}
+              />
+              <h1
+                style={{
+                  position: "absolute",
+                  top: 100,
+                  left: 40,
+                  color: "white",
                 }}
               >
-                <Card card={card} />
-              </div>
-            ))}
+                {numCardsDeck}
+              </h1>
+            </div>
           </div>
+          <div>
+            <h2>Attacking Cards:</h2>
+            <div style={{ display: "flex", flexDirection: "row" }}>
+              {attackingCards.map((card, index) => (
+                <div
+                  key={index}
+                  //Card given CSS class 'selected' when set as attackerCard
+                  className={attackerCard === card ? "selected" : ""}
+                  onClick={() => {
+                    handleAttackerCardClick(card);
+                  }}
+                >
+                  <Card card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {renderHand()}
+          {(player.role !== "winner" || player.role !== "durak") && (
+            <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+          )}
         </div>
-        {renderHand()}
-        {(player.role !== "winner" || player.role !== "durak") && (
-          <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
-        )}
-
-        <div
-          style={{
-            borderLeft: "1px solid black",
-            width: "25%",
-            height: "50%",
-            position: "absolute",
-            bottom: 0,
-            right: 0,
-          }}
-        >
-          {showCounteredCards()}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            borderLeft: "1px solid black",
-            borderBottom: "1px solid black",
-            width: "25%",
-            height: "50%",
-            position: "absolute",
-            top: 0,
-            right: 0,
-          }}
-        >
-          <EventCommenter />
-        </div>
+        {counteredCards.length > 0 && showCounteredCards()}
       </div>
-    </div>
   );
 }
 

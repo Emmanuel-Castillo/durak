@@ -4,6 +4,7 @@ import { useSocket } from "../context/SocketContext.js";
 import { usePlayer } from "../context/PlayerContext.js";
 import Board from "./Board.jsx";
 import LeaderBoard from "./LeaderBoard.jsx";
+import Commenter from "./Commenter.jsx";
 
 const Game = () => {
   const socket = useSocket();
@@ -70,21 +71,7 @@ const Game = () => {
 
   return (
     <>
-      <form
-        style={{ marginBottom: 8 }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          socket.emit("updateName", socket.id, name);
-        }}
-      >
-        <label htmlFor="name">Enter Name: </label>
-        <input
-          type="text"
-          id="name"
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button style={{ marginLeft: 8 }}>Submit</button>
-      </form>
+
       {gameStarted ? (
         <>
           <Board />
@@ -92,6 +79,7 @@ const Game = () => {
         </>
       ) : (
         <>
+
           <button onClick={() => startGame()}>Start Game</button>
         </>
       )}

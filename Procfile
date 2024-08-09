@@ -1,1 +1,1 @@
-web: node durak-server/server.js
+web: node server/server.js

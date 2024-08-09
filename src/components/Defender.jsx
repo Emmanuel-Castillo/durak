@@ -113,7 +113,8 @@ function Defender({
         counteredCards.length === 0 &&
         attackingCards.length < nextPlayerNumCards
       ) {
-        socket.emit("updateAttackingCards", attackingCards, defenderCard, 1);
+        socket.emit("updateAttackingCards", attackingCards, defenderCard, 1,
+        player.name);
         socket.emit("updateHand", player.id, defenderCard, -1);
         socket.emit("passDefenderRole", socket.id);
         setDefenderCard(null);
@@ -128,8 +129,7 @@ function Defender({
         style={{
           display: "flex",
           flexDirection: "row",
-          width: "70%",
-          flexWrap: "wrap",
+          flexWrap: "wrap"
         }}
       >
         {player.hand.map((card, index) => (

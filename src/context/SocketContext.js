@@ -15,9 +15,9 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    // process.env.REACT_APP_SERVER_URL || 
+     
     // Create a socket connection to the server
-    const serverURL = 'http://localhost:4000';
+    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:4000';
     const newSocket = io(serverURL);
     setSocket(newSocket);
 
