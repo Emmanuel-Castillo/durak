@@ -5,6 +5,7 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
+import PlayerGraph from "./PlayerGraph";
 
 function Board() {
   // Client socket that receives emitted signals from server
@@ -178,6 +179,7 @@ function Board() {
                 {numCardsDeck}
               </h1>
             </div>
+            <PlayerGraph/>
           </div>
           <div>
             <h2>Attacking Cards:</h2>

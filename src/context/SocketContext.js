@@ -17,7 +17,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
      
     // Create a socket connection to the server
-    const serverURL = process.env.REACT_APP_SERVER_URL || 'http://localhost:4000';
+    const serverURL = 'http://localhost:4000' || process.env.REACT_APP_SERVER_URL;
     const newSocket = io(serverURL);
     setSocket(newSocket);
 

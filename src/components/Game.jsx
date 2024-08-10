@@ -9,9 +9,9 @@ import Commenter from "./Commenter.jsx";
 const Game = () => {
   const socket = useSocket();
   const { player, setPlayer } = usePlayer();
-  const [name, setName] = useState(null);
+  const [gamePlayable, setGamePlayable] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameEnded, setGameEnded] = useState(false)
+  const [gameEnded, setGameEnded] = useState(false);
   const [leaderBoard, setLeaderBoard] = useState([]);
 
   // socket effects to each player
@@ -33,20 +33,24 @@ const Game = () => {
 
     socket.on("changeRole", (role) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, role: role }));
-      console.log("new role", player.role)
+      console.log("new role", player.role);
     });
 
     socket.on("leaderBoard", (board) => {
       setLeaderBoard(board);
     });
+
+    socket.on("gameCanStart", () => {
+      setGamePlayable(true);
+    });
     // start game for everyone; renders the Board
     socket.on("gameStarted", () => {
       setGameStarted(true);
-      setGameEnded(false)
+      setGameEnded(false);
     });
 
     socket.on("gameEnded", () => {
-      setGameEnded(true)
+      setGameEnded(true);
       setGameStarted(false);
     });
 
@@ -62,27 +66,39 @@ const Game = () => {
 
   // function called to emit 'startGame' to server
   function startGame() {
-    socket.emit("startGame");
+    socket.emit("startGame", socket.id);
+  }
+
+  function joinPlayers() {
+    socket.emit("joinPlayers", socket.id);
   }
 
   function startNextGame() {
-    socket.emit("nextGame")
+    socket.emit("nextGame");
   }
 
   return (
     <>
-
-      {gameStarted ? (
+      {gamePlayable ? (
         <>
-          <Board />
-          <button onClick={() => startGame()}>Restart Game</button>
+          {gameStarted ? (
+            <>
+              <Board />
+              <button onClick={() => startGame()}>Restart Game</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => startGame()}>Start Game</button>
+            </>
+          )}
         </>
       ) : (
         <>
-
-          <button onClick={() => startGame()}>Start Game</button>
+          <button onClick={() => joinPlayers()}>Join Game</button>
+          <p>Waiting for players...</p>
         </>
       )}
+
       {gameEnded && <button onClick={() => startNextGame()}>New Game</button>}
       {leaderBoard.length > 0 && (
         <div style={gameStarted ? leaderBoardCorner : leaderBoardCenter}>
@@ -102,7 +118,7 @@ const leaderBoardCorner = {
   border: "1px solid black",
   padding: 16,
   justifyContent: "center",
-  alignItems: "center"
+  alignItems: "center",
 };
 
 const leaderBoardCenter = {
@@ -118,5 +134,5 @@ const leaderBoardCenter = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  fontSize: 24
+  fontSize: 24,
 };
