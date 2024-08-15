@@ -9,12 +9,12 @@ function PlayerGraph() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
-  const socket = useSocket();
+  const {socket} = useSocket();
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket?.instance) return;
 
-    socket.on("updatePlayers", (players) => {
+    socket.instance.on("updatePlayers", (players) => {
       setPlayers(players);
     });
   }, [socket]);

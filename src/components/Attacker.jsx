@@ -3,8 +3,8 @@ import { usePlayer } from "../context/PlayerContext";
 import { useSocket } from "../context/SocketContext";
 import Card from "./Card";
 
-function Attacker({ attackingCards, counteredCards }) {
-  const socket = useSocket();
+function Attacker({ tsarCard, attackingCards, counteredCards }) {
+  const {socket} = useSocket();
   const { player } = usePlayer();
   const [pressedEndTurn, setPressedEndTurn] = useState(false)
 
@@ -12,18 +12,31 @@ function Attacker({ attackingCards, counteredCards }) {
 
   // Will run once for all attackers once this component mounts
   useEffect(() => {
-    socket.emit("numDefCards");
+    if (!socket?.instance) return 
+    socket.instance.emit("numDefCards");
   }, []);
 
   useEffect(() => {
-    socket.on("numDefenderCards", (num) => {
+    if (!socket?.instance) return
+    socket.instance.on("numDefenderCards", (num) => {
       setNumDefenderCards(num);
     });
 
-    socket.on("resetStates", () => {
+    socket.instance.on("resetStates", () => {
       setPressedEndTurn(false)
     })
-  }, socket);
+  }, [socket]);
+
+  // Function sorts cards, accessible to all players
+  // Sorts by rank (tsarCard suit has higher priority than all other suits)
+  function sortCards(tsarCard) {
+    const sortedCards = [...player.hand].sort((a, b) => {
+      if (a.suit === tsarCard.suit && b.suit !== tsarCard.suit) return 1;
+      else if (a.suit !== tsarCard.suit && b.suit === tsarCard.suit) return -1;
+      else return a.rank - b.rank;
+    });
+    socket.instance.emit("updateHand", player.id, sortedCards, 1);
+  }
 
   return (
     <div>
@@ -46,8 +59,8 @@ function Attacker({ attackingCards, counteredCards }) {
                 ) &&
                   attackingCards.length < maxCardsToFace)
               ) {
-                socket.emit("updateAttackingCards", attackingCards, card, 1, player.name);
-                socket.emit("updateHand", player.id, card, -1);
+                socket.instance.emit("updateAttackingCards", attackingCards, card, 1, player.name);
+                socket.instance.emit("updateHand", player.id, card, -1);
               }
             }}
           >
@@ -55,11 +68,15 @@ function Attacker({ attackingCards, counteredCards }) {
           </div>
         ))}
       </div>
-      {attackingCards.length === 0 && !pressedEndTurn && (
-        <button onClick={() => {socket.emit("endAttackerTurn", player.name)
+      <div style={{display: "flex", flexDirection: "column", width: 100, height: 50, justifyContent: "space-between", marginTop: 8}}>
+        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+        {attackingCards.length === 0 && !pressedEndTurn && (
+        <button onClick={() => {socket.instance.emit("endAttackerTurn", player.name)
           setPressedEndTurn(true)
         }}>End Turn</button>
       )}
+      </div>
+      
     </div>
   );
 }

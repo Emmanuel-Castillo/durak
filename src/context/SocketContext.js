@@ -12,22 +12,37 @@ export const useSocket = () => {
 
 // Provider component that wraps your app and makes the socket intance available to any child component that calls useSocket()
 export const SocketProvider = ({ children }) => {
-  const [socket, setSocket] = useState(null);
+  const [socket, setSocket] = useState({
+    instance: null,
+    room: null
+  });
 
   useEffect(() => {
      
     // Create a socket connection to the server
     const serverURL = 'http://localhost:4000' || process.env.REACT_APP_SERVER_URL;
     const newSocket = io(serverURL);
-    setSocket(newSocket);
+
+    // Update state with the new socket instance
+    setSocket((prevState) => ({
+      ...prevState,
+      instance: newSocket,
+    }));
 
     // Clean up the socket connection when the component unmounts
     return () => newSocket.close();
   }, []);
 
+  const joinRoom = (newRoom) => {
+    setSocket((prevState) => ({
+      ...prevState, 
+      room: newRoom
+    }))
+  }
+
   return (
     // Make the socket instance available to any nested component that calls useSocket(). The children prop contains the components wrapped by the provider
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={{socket, joinRoom}}>
       {children}
     </SocketContext.Provider>
   );

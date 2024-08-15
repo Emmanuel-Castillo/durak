@@ -4,11 +4,11 @@ import { useSocket } from "../context/SocketContext.js";
 import { usePlayer } from "../context/PlayerContext.js";
 import Board from "./Board.jsx";
 import LeaderBoard from "./LeaderBoard.jsx";
-import Commenter from "./Commenter.jsx";
 
 const Game = () => {
-  const socket = useSocket();
+  const {socket} = useSocket();
   const { player, setPlayer } = usePlayer();
+  const [players, setPlayers] = useState([]);
   const [gamePlayable, setGamePlayable] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -16,86 +16,130 @@ const Game = () => {
 
   // socket effects to each player
   useEffect(() => {
-    if (socket == null) return;
+    if (!socket?.instance) return;
 
     // player gets their stats beginning of game
-    socket.on("startingStats", (newPlayer) => {
+    socket.instance.on("startingStats", (newPlayer) => {
       setPlayer(newPlayer);
     });
 
-    socket.on("changeName", (name) => {
+    socket.instance.on("changeName", (name) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, name: name }));
     });
 
-    socket.on("changeHand", (cards) => {
+    socket.instance.on("changeHand", (cards) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, hand: cards }));
     });
 
-    socket.on("changeRole", (role) => {
+    socket.instance.on("changeRole", (role) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, role: role }));
-      console.log("new role", player.role);
     });
 
-    socket.on("leaderBoard", (board) => {
+    socket.instance.on("leaderBoard", (board) => {
       setLeaderBoard(board);
     });
 
-    socket.on("gameCanStart", () => {
+    socket.instance.on("gameCanStart", () => {
       setGamePlayable(true);
     });
+
+    socket.instance.on("updatePlayers", (playersNames) => {
+      setPlayers(playersNames);
+    });
+
     // start game for everyone; renders the Board
-    socket.on("gameStarted", () => {
+    socket.instance.on("gameStarted", () => {
       setGameStarted(true);
       setGameEnded(false);
     });
 
-    socket.on("gameEnded", () => {
+    socket.instance.on("gameEnded", () => {
       setGameEnded(true);
       setGameStarted(false);
     });
 
     return () => {
-      socket.off("startingStats");
-      socket.off("changeName");
-      socket.off("changeHand");
-      socket.off("changeRole");
-      socket.off("gameStarted");
-      socket.off("leaderBoard");
+      socket.instance.off("startingStats");
+      socket.instance.off("changeName");
+      socket.instance.off("changeHand");
+      socket.instance.off("changeRole");
+      socket.instance.off("gameStarted");
+      socket.instance.off("leaderBoard");
     };
   }, [socket]);
 
   // function called to emit 'startGame' to server
   function startGame() {
-    socket.emit("startGame", socket.id);
-  }
-
-  function joinPlayers() {
-    socket.emit("joinPlayers", socket.id);
+    socket.instance.emit("startGame");
   }
 
   function startNextGame() {
-    socket.emit("nextGame");
+    socket.instance.emit("nextGame");
   }
 
-  return (
-    <>
+  function joinPlayersDiv() {
+    if (players.length < 4)
+      return <button onClick={() => socket.instance.emit("joinPlayers")}>Join Game</button>;
+    else return <p>Player list is maxed out</p>;
+  }
+  
+  function joinSpectatorsDiv() {
+    return (
+      <button onClick={() => socket.instance.emit("joinSpectators")}>
+        Spectate Game
+      </button>
+    );
+  }
+  
+  function renderWaitForGameDiv() {
+    switch (player.role) {
+      case "player":
+        return <p>You will be playing the game...</p>;
+        case "spectator":
+          return <p>You will be spectating the game...</p>;
+          default:
+            return (
+              <p>
+            Select whether to play or spectate. If game starts without a
+            decision made, you will turn into a spectator.
+          </p>
+        );
+      }
+    }
+    
+    function renderStartGameBtn() {
+      return (
+        players.length >= 2 &&
+        players.length <= 4 &&
+        player.role === "player" && (
+          <button onClick={() => startGame()}>Start Game</button>
+        )
+      );
+    }
+    
+    return (
+      <>
       {gamePlayable ? (
         <>
           {gameStarted ? (
             <>
               <Board />
-              <button onClick={() => startGame()}>Restart Game</button>
+              {/* <button onClick={() => startGame()}>Restart Game</button> */}
             </>
           ) : (
             <>
-              <button onClick={() => startGame()}>Start Game</button>
+              {joinPlayersDiv()}
+              {joinSpectatorsDiv()}
+              {renderStartGameBtn()}
+              {renderWaitForGameDiv()}
             </>
           )}
         </>
       ) : (
         <>
-          <button onClick={() => joinPlayers()}>Join Game</button>
-          <p>Waiting for players...</p>
+          {joinPlayersDiv()}
+          {joinSpectatorsDiv()}
+          {renderWaitForGameDiv()}
         </>
       )}
 
