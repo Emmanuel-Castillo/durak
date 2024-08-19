@@ -707,8 +707,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (message) => {
-    const socketRoom = rooms.find((room) => room.roomName === socket.room);
-    io.to(socketRoom.roomName).emit(
+    io.to(socket.room).emit(
       "updateComments",
       `[${socket.name}]: ${message}`
     );
