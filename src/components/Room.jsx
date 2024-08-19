@@ -1,9 +1,16 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSocket } from "../context/SocketContext";
 
 function Room() {
 
   const {socket} = useSocket()
+  const [gameStarted, setGameStarted] = useState(false)
+
+  useEffect(() => {
+    socket.instance.on("gameStarted", () => {
+      setGameStarted(true)
+    })
+  }, [socket])
 
   return (
     <div style={{ width: 500, border: "1px solid black", borderRight: "hidden" , padding: 8 }}>
@@ -14,9 +21,9 @@ function Room() {
             {socket.room.numUsers} {socket.room.numUsers === 1 ? "user" : "users"}
           </h4>
         </div>
-        <button
+        {!gameStarted && <button
           onClick={() => {socket.instance.emit("leaveRoom", socket.room.roomName)}}
-        >Leave Room</button>
+        >Leave Room</button>}
       </div>
       <hr />
       <div style={{ overflowY: "auto" }}>

@@ -12,11 +12,22 @@ function PlayerGraph() {
   const {socket} = useSocket();
 
   useEffect(() => {
+    if (!socket.instance) return
+
+    socket.instance.emit("hasGameStarted")
+  }, [])
+
+  useEffect(() => {
     if (!socket?.instance) return;
 
     socket.instance.on("updatePlayers", (players) => {
       setPlayers(players);
     });
+
+    socket.instance.on("joiningMidGame", (gameData) => {
+      const playersNames = gameData.players.map((player) => {return player.name})
+      setPlayers(playersNames)
+    })
   }, [socket]);
 
   useEffect(() => {

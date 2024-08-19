@@ -6,6 +6,7 @@ import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
 import PlayerGraph from "./PlayerGraph";
+import Spectator from "./Spectator";
 
 function Board() {
   // Client socket that receives emitted signals from server
@@ -26,6 +27,12 @@ function Board() {
 
   // Keep track of num cards in board
   const [numCardsDeck, setNumCardsDeck] = useState(36);
+
+  useEffect(() => {
+    if (!socket.instance) return
+
+    socket.instance.emit("hasGameStarted")
+  }, [])
 
   useEffect(() => {
     if (!socket?.instance) return;
@@ -51,6 +58,16 @@ function Board() {
       setCounteredCards([]);
       setAttackerCard(null);
     });
+
+     // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
+     socket.instance.on("joiningMidGame", (gameData) => {
+      console.log('Received mid-game data:', gameData);  // Log to confirm the event is triggered
+      setTsarCard(gameData.tsarCard)
+      setAttackingCards(gameData.attackingCards)
+      setCounteredCards(gameData.counteredCards)
+      setNumCardsDeck(gameData.deck.length)
+    });
+    
 
     return () => {
       socket.instance.off("attackingCards");
@@ -129,6 +146,7 @@ function Board() {
             />
         );
 
+      case "spectator": 
       case "winner":
       case "durak":
         return <></>;

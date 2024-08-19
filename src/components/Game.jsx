@@ -9,10 +9,18 @@ const Game = () => {
   const {socket} = useSocket();
   const { player, setPlayer } = usePlayer();
   const [players, setPlayers] = useState([]);
+  // const [gameState, setGameState] = useState("notPlayable")
   const [gamePlayable, setGamePlayable] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const [gameCrashed, setGameCrashed] = useState(false);
   const [leaderBoard, setLeaderBoard] = useState([]);
+
+  useEffect(() => {
+    if (!socket.instance) return
+
+    socket.instance.emit("hasGameStarted")
+  }, [])
 
   // socket effects to each player
   useEffect(() => {
@@ -30,15 +38,15 @@ const Game = () => {
     socket.instance.on("changeHand", (cards) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, hand: cards }));
     });
-
+    
     socket.instance.on("changeRole", (role) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, role: role }));
     });
-
+    
     socket.instance.on("leaderBoard", (board) => {
       setLeaderBoard(board);
     });
-
+    
     socket.instance.on("gameCanStart", () => {
       setGamePlayable(true);
     });
@@ -58,6 +66,22 @@ const Game = () => {
       setGameStarted(false);
     });
 
+    // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
+    socket.instance.on("joiningMidGame", (gameData) => {
+      setGamePlayable(true);
+      setGameStarted(true);
+      setGameEnded(false);
+      setLeaderBoard(gameData.winners)
+    });
+    
+    socket.instance.on("gameCrash", () => {
+      setGameCrashed(true)
+      setGamePlayable(false);
+      setGameStarted(false);
+      setGameEnded(false);
+    })
+    
+
     return () => {
       socket.instance.off("startingStats");
       socket.instance.off("changeName");
@@ -65,8 +89,13 @@ const Game = () => {
       socket.instance.off("changeRole");
       socket.instance.off("gameStarted");
       socket.instance.off("leaderBoard");
+      socket.instance.off("joiningMidGame")
     };
   }, [socket]);
+
+  useEffect(() => {
+    console.log("socket on")
+  }, [socket])
 
   // function called to emit 'startGame' to server
   function startGame() {
@@ -119,6 +148,7 @@ const Game = () => {
     
     return (
       <>
+      {gameCrashed && <h1>Game Crashed because a player left! Must restart game...</h1>}
       {gamePlayable ? (
         <>
           {gameStarted ? (
