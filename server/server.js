@@ -520,7 +520,10 @@ io.on("connection", (socket) => {
       );
       socketRoom.gameData.winners.push(durak);
       io.to(socketRoom.roomName).emit("leaderBoard", socketRoom.gameData.winners);
-      socketRoom.gameData.players = [];
+      socketRoom.tsarCard = null,
+      socketRoom.attackingCards = []
+      socketRoom.counteredCards = []
+       
       io.to(socketRoom.roomName).emit("gameEnded");
     }
   }
