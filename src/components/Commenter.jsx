@@ -41,7 +41,7 @@ function Commenter() {
                 <form onSubmit={(e) => {
                     e.preventDefault()
                     if (message && message.length >= 0) {
-                        socket.instance.emit("sendMessage", socket.instance.id, message)
+                        socket.instance.emit("sendMessage", message)
                         setMessage("")
                     }
                 }}><input type="text" value={message} onChange={(e) => setMessage(e.target.value)} />

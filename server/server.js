@@ -706,12 +706,11 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("sendMessage", (sender, message) => {
+  socket.on("sendMessage", (message) => {
     const socketRoom = rooms.find((room) => room.roomName === socket.room);
-    const player = socketRoom.gameData.players.find((player) => player.id === sender);
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `[${player.name || socket.name}]: ${message}`
+      `[${socket.name}]: ${message}`
     );
   });
 
