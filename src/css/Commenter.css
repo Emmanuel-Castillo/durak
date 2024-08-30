@@ -1,0 +1,44 @@
+.commenter-wrapper {
+  border: 1px solid black;
+  height: 100%;
+}
+
+.comments-list {
+  border-bottom: 1px solid black;
+  height: 85%;
+  overflow-y: auto;
+}
+
+.comment {
+  font-size: 12px;
+  border-bottom: 1px solid black;
+  margin-top: 12px;
+  padding-left: 4px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.user-input_box {
+  display: flex;
+  justify-content: space-between;
+  height: 15%;
+  padding: 0 8px 0 8px;
+  align-items: center;
+}
+
+.user_form-input {
+  padding: 4px;
+  width: 70%;
+}
+
+.commenter-options {
+  display: flex;
+  flex-direction: column;
+  width: 20%;
+  margin-right: 8px;
+}
+
+.lock-btn_selected {
+  background-color: grey;
+  color: white;
+}

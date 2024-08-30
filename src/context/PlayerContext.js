@@ -6,10 +6,10 @@ export const usePlayer = () => useContext(PlayerContext);
 
 export const PlayerProvider = ({ children }) => {
   const [player, setPlayer] = useState({
-    id: '',
-    name: '',
-    hand: [],
-    role: '',
+    id: null,
+    name: null,
+    hand: null,
+    role: null,
     // other player-specific state
   });
 

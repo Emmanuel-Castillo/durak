@@ -1,26 +1,23 @@
-// src/Chat.js (or create a new component like src/Game.js)
 import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext.js";
 import { usePlayer } from "../context/PlayerContext.js";
 import Board from "./Board.jsx";
 import LeaderBoard from "./LeaderBoard.jsx";
+import Room from "./Room.jsx";
 
 const Game = () => {
-  const {socket} = useSocket();
+  const { socket } = useSocket();
   const { player, setPlayer } = usePlayer();
   const [players, setPlayers] = useState([]);
-  // const [gameState, setGameState] = useState("notPlayable")
-  const [gamePlayable, setGamePlayable] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameEnded, setGameEnded] = useState(false);
-  const [gameCrashed, setGameCrashed] = useState(false);
+  const [gameState, setGameState] = useState(null);
   const [leaderBoard, setLeaderBoard] = useState([]);
 
+  // Called when mounted once. Intended for spectators to check server if game has started
   useEffect(() => {
-    if (!socket.instance) return
+    if (!socket.instance) return;
 
-    socket.instance.emit("hasGameStarted")
-  }, [])
+    socket.instance.emit("hasGameStarted");
+  }, []);
 
   // socket effects to each player
   useEffect(() => {
@@ -38,175 +35,145 @@ const Game = () => {
     socket.instance.on("changeHand", (cards) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, hand: cards }));
     });
-    
+
     socket.instance.on("changeRole", (role) => {
       setPlayer((prevPlayer) => ({ ...prevPlayer, role: role }));
     });
-    
-    socket.instance.on("leaderBoard", (board) => {
-      setLeaderBoard(board);
+
+    socket.instance.on("leaderBoard", (winners) => {
+      setLeaderBoard(winners);
     });
-    
-    socket.instance.on("gameCanStart", () => {
-      setGamePlayable(true);
+
+    socket.instance.on("updateGameState", (state) => {
+      setGameState(state);
     });
 
     socket.instance.on("updatePlayers", (playersNames) => {
       setPlayers(playersNames);
     });
 
-    // start game for everyone; renders the Board
-    socket.instance.on("gameStarted", () => {
-      setGameStarted(true);
-      setGameEnded(false);
-    });
-
-    socket.instance.on("gameEnded", () => {
-      setGameEnded(true);
-      setGameStarted(false);
-    });
-
     // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
     socket.instance.on("joiningMidGame", (gameData) => {
-      setGamePlayable(true);
-      setGameStarted(true);
-      setGameEnded(false);
-      setLeaderBoard(gameData.winners)
+      setGameState("started");
+      setLeaderBoard(gameData.winners);
     });
-    
-    socket.instance.on("gameCrash", () => {
-      setGameCrashed(true)
-      setGamePlayable(false);
-      setGameStarted(false);
-      setGameEnded(false);
-    })
-    
+
+    socket.instance.on("joiningEndGame", (winners) => {
+      setGameState("ended");
+      setLeaderBoard(winners);
+    });
 
     return () => {
       socket.instance.off("startingStats");
       socket.instance.off("changeName");
       socket.instance.off("changeHand");
       socket.instance.off("changeRole");
-      socket.instance.off("gameStarted");
+      socket.instance.off("updateGameStatus");
       socket.instance.off("leaderBoard");
-      socket.instance.off("joiningMidGame")
+      socket.instance.off("joiningMidGame");
+      socket.instance.off("joiningEndGame");
     };
   }, [socket]);
 
-  useEffect(() => {
-    console.log("socket on")
-  }, [socket])
-
-  // function called to emit 'startGame' to server
-  function startGame() {
-    socket.instance.emit("startGame");
-  }
-
-  function startNextGame() {
-    socket.instance.emit("nextGame");
-  }
-
-  function joinPlayersDiv() {
+  function joinPlayersButton() {
     if (players.length < 4)
-      return <button onClick={() => socket.instance.emit("joinPlayers")}>Join Game</button>;
+      return (
+        <button
+          className="button_margin-right"
+          onClick={() => socket.instance.emit("joinPlayers")}
+        >
+          Join Game
+        </button>
+      );
     else return <p>Player list is maxed out</p>;
   }
-  
-  function joinSpectatorsDiv() {
+
+  function joinSpectatorsButton() {
     return (
-      <button onClick={() => socket.instance.emit("joinSpectators")}>
+      <button
+        className="button_margin-right"
+        onClick={() => socket.instance.emit("joinSpectators")}
+      >
         Spectate Game
       </button>
     );
   }
-  
+
   function renderWaitForGameDiv() {
     switch (player.role) {
       case "player":
         return <p>You will be playing the game...</p>;
-        case "spectator":
-          return <p>You will be spectating the game...</p>;
-          default:
-            return (
-              <p>
+      case "spectator":
+        return <p>You will be spectating the game...</p>;
+      default:
+        return (
+          <p>
             Select whether to play or spectate. If game starts without a
             decision made, you will turn into a spectator.
           </p>
         );
-      }
     }
-    
-    function renderStartGameBtn() {
-      return (
-        players.length >= 2 &&
-        players.length <= 4 &&
-        player.role === "player" && (
-          <button onClick={() => startGame()}>Start Game</button>
-        )
-      );
-    }
-    
+  }
+
+  function renderStartGameBtn() {
     return (
-      <>
-      {gameCrashed && <h1>Game Crashed because a player left! Must restart game...</h1>}
-      {gamePlayable ? (
-        <>
-          {gameStarted ? (
-            <>
-              <Board />
-              {/* <button onClick={() => startGame()}>Restart Game</button> */}
-            </>
-          ) : (
-            <>
-              {joinPlayersDiv()}
-              {joinSpectatorsDiv()}
+      players.length >= 2 &&
+      players.length <= 4 &&
+      player.role === "player" && (
+        <button onClick={() => socket.instance.emit("startGame")}>
+          Start Game
+        </button>
+      )
+    );
+  }
+
+  function renderGame() {
+    switch (gameState) {
+      case "crashed":
+        return (
+          <>
+            {socket && socket.room && <Room />}
+            <div style={{ padding: 8 }}>
+              <h1 className="h1_left-justified">
+                Game Crashed because a player left! Must restart game...
+              </h1>
+              {joinPlayersButton()}
+              {joinSpectatorsButton()}
               {renderStartGameBtn()}
               {renderWaitForGameDiv()}
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          {joinPlayersDiv()}
-          {joinSpectatorsDiv()}
-          {renderWaitForGameDiv()}
-        </>
-      )}
+            </div>
+          </>
+        );
+      case "started":
+        return <Board leaderBoard={leaderBoard} />;
+      case "ended":
+        return (
+          <>
+            <LeaderBoard leaderBoard={leaderBoard} />
+            <button onClick={() => socket.instance.emit("nextGame")}>
+              Next Game
+            </button>
+            <button onClick={() => socket.instance.emit("newGame")}>
+              New Game
+            </button>
+          </>
+        );
+      default:
+        return (
+          <>
+            {socket && socket.room && <Room />}
+            <div style={{ padding: 8 }}>
+              {joinPlayersButton()}
+              {joinSpectatorsButton()}
+              {renderStartGameBtn()}
+              {renderWaitForGameDiv()}
+            </div>
+          </>
+        );
+    }
+  }
 
-      {gameEnded && <button onClick={() => startNextGame()}>New Game</button>}
-      {leaderBoard.length > 0 && (
-        <div style={gameStarted ? leaderBoardCorner : leaderBoardCenter}>
-          <LeaderBoard leaderBoard={leaderBoard} gameStarted={gameStarted} />
-        </div>
-      )}
-    </>
-  );
+  return renderGame();
 };
 
 export default Game;
-
-const leaderBoardCorner = {
-  position: "absolute",
-  top: 50,
-  right: 50,
-  border: "1px solid black",
-  padding: 16,
-  justifyContent: "center",
-  alignItems: "center",
-};
-
-const leaderBoardCenter = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  border: "1px solid black",
-  padding: 16,
-  backgroundColor: "white",
-  width: "30%",
-  height: "fit-content%",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  fontSize: 24,
-};

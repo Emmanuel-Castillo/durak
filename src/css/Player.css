@@ -1,0 +1,30 @@
+.player-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.player-hand {
+  display: flex;
+  margin-top: 8px;
+}
+
+.player_button-list {
+  display: flex;
+  justify-content: center;
+}
+
+.selected {
+  /* border: 1px solid black; */
+}
+
+.player-card {
+  height: fit-content;
+}
+
+.player-card:hover {
+  scale: 1.10;
+  margin: 4px;
+  z-index: 10;
+}

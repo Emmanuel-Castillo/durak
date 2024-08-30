@@ -1,0 +1,8 @@
+.player-container {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.player_place {
+  margin-right: 20px;
+}

@@ -1,3 +1,4 @@
+import "../css/Board.css"
 import React, { useEffect, useState } from "react";
 import Card from "./Card";
 import { useSocket } from "../context/SocketContext";
@@ -5,13 +6,14 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
-import PlayerGraph from "./PlayerGraph";
-import Spectator from "./Spectator";
+import LeaderBoard from "./LeaderBoard";
 
-function Board() {
+function Board({ leaderBoard }) {
   // Client socket that receives emitted signals from server
   const { socket } = useSocket();
   const { player } = usePlayer();
+
+  const [otherPlayers, setOtherPlayers] = useState([]);
 
   // Deck information
   const [tsarCard, setTsarCard] = useState(null);
@@ -29,19 +31,41 @@ function Board() {
   const [numCardsDeck, setNumCardsDeck] = useState(36);
 
   useEffect(() => {
-    if (!socket.instance) return
+    if (!socket.instance) return;
 
-    socket.instance.emit("hasGameStarted")
-  }, [])
+    if (!player.role) socket.instance.emit("hasGameStarted");
+  }, []);
 
   useEffect(() => {
     if (!socket?.instance) return;
+
+    // Grab other players in the game when it begins
+    // Must implement seperate fnx in for small changes in the players array, not recopy everything over
+    socket.instance.on("otherPlayers", (players) => {
+      const ifPlayer = players.find(
+        (player) => player.id === socket.instance.id
+      );
+      if (ifPlayer) {
+        var greaterIndex = players.filter(
+          (player) => player.index > ifPlayer.index
+        );
+        var lowerIndex = players.filter(
+          (player) => player.index < ifPlayer.index
+        );
+
+        var playersExcludingSelf = greaterIndex.concat(lowerIndex);
+        setOtherPlayers(playersExcludingSelf);
+      } else {
+        setOtherPlayers(players);
+      }
+    });
 
     socket.instance.on("attackingCards", (cards) => {
       setAttackingCards(cards);
     });
 
     socket.instance.on("counteredCards", (cards) => {
+      console.log(counteredCards);
       setCounteredCards(cards);
     });
 
@@ -59,21 +83,22 @@ function Board() {
       setAttackerCard(null);
     });
 
-     // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
-     socket.instance.on("joiningMidGame", (gameData) => {
-      console.log('Received mid-game data:', gameData);  // Log to confirm the event is triggered
-      setTsarCard(gameData.tsarCard)
-      setAttackingCards(gameData.attackingCards)
-      setCounteredCards(gameData.counteredCards)
-      setNumCardsDeck(gameData.deck.length)
+    // SPECTATORS ONLY: When connecting to room mid-game, set states using current game data
+    socket.instance.on("joiningMidGame", (gameData) => {
+      setOtherPlayers(gameData.players);
+      setTsarCard(gameData.tsarCard);
+      setAttackingCards(gameData.attackingCards);
+      setCounteredCards(gameData.counteredCards);
+      setNumCardsDeck(gameData.deck.length);
     });
-    
 
     return () => {
       socket.instance.off("attackingCards");
       socket.instance.off("counteredCards");
       socket.instance.off("tsarCard");
       socket.instance.off("resetStates");
+      socket.instance.off("joiningMidGame");
+      socket.instance.off("otherPlayers");
     };
   }, [socket]);
 
@@ -83,136 +108,222 @@ function Board() {
       setAttackerCard((prevCard) => (prevCard === card ? null : card));
   }
 
-  // Renders all countered cards made by defender to all clients
-  function showCounteredCards() {
-    return (
-      <div
-        style={{
-          borderLeft: "1px solid black",
-          padding: "8px",
-        }}
-      >
-        <h1>Countered Cards:</h1>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            overflowY: "auto",
-          }}
-        >
-          {counteredCards.map((cards, index) => {
-            return (
-              <div
-                style={{
-                  display: "flex",
-                  scale: ".65",
-                  width: "fit-content",
-                }}
-                key={index}
-              >
-                <Card card={cards.attackerCard} />
-                <Card card={cards.defenderCard} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
+  // Dynamically render the player's hand depending on role
   function renderHand() {
     switch (player.role) {
       case "firstPlayer":
-        return (
-            <FirstPlayer tsarCard={tsarCard} attackingCards={attackingCards} />
-        );
+      case "defender":
       case "attacker":
         return (
-            <Attacker
-              tsarCard={tsarCard}
-              attackingCards={attackingCards}
-              counteredCards={counteredCards}
-            />
+          <div className="row-container">
+            <div className="player-info">
+              <p className="player-name white-text">{player.name}</p>
+              <p>{player.role}</p>
+              <p>{player.hand.length} cards</p>
+            </div>
+            {player.role === "firstPlayer" && (
+              <FirstPlayer
+                tsarCard={tsarCard}
+                attackingCards={attackingCards}
+              />
+            )}
+            {player.role === "attacker" && (
+              <Attacker
+                tsarCard={tsarCard}
+                attackingCards={attackingCards}
+                counteredCards={counteredCards}
+              />
+            )}
+            {player.role === "defender" && (
+              <Defender
+                tsarCard={tsarCard}
+                attackerCard={attackerCard}
+                setAttackerCard={setAttackerCard}
+                attackingCards={attackingCards}
+                counteredCards={counteredCards}
+              />
+            )}
+          </div>
         );
-
-      case "defender":
-        return (
-            <Defender
-              tsarCard={tsarCard}
-              attackerCard={attackerCard}
-              setAttackerCard={setAttackerCard}
-              attackingCards={attackingCards}
-              counteredCards={counteredCards}
-            />
-        );
-
-      case "spectator": 
+      case "spectator":
       case "winner":
       case "durak":
         return <></>;
-
       default:
         break;
     }
   }
 
-  // Render Board to all players
-  // Renders appropriate hands to specifically assigned players
-  return (
-    <div
-      style={{
-        border: "1px solid black",
-        display: "flex",
-      }}
-    >
-      <div style={{ width: "100%", padding: 8 }}>
-        <div style={{ display: "flex" }}>
-          <div>
-            <h2>TsarCard:</h2>
-            <Card card={tsarCard} />
-          </div>
-          <div style={{ position: "relative", marginLeft: 40 }}>
-            <h2>Deck:</h2>
+  // Render the other player on the column HTML element
+  function returnColumnPlayer(player) {
+    return (
+      <div className="column-container">
+        <div className="player-info">
+          <p className="player-name">{player?.name}</p>
+          <p>{player?.role}</p>
+          <p>{player?.hand.length} cards</p>
+        </div>
+        <div className="column_card-hand">
+          {player?.hand.map(() => (
+            <div className="column_card-container">
+              <img
+                src="../../assets/backside_card.jpg"
+                className="column_card-img"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Render the other player on the horizontal HTML element
+  function returnHorizontalPlayer(player) {
+    return (
+      <div className="row-container">
+        <div className="player-info">
+          <p className="player-name">{player?.name}</p>
+          <p>{player?.role}</p>
+          <p>{player?.hand.length} cards</p>
+        </div>
+        <div className="horizontal-hand_container">
+          {player?.hand.map(() => (
             <img
               src="../../assets/backside_card.jpg"
-              alt=""
-              style={{ margin: "0 10px", width: "100px", height: "145.20px" }}
+              className="horizontal-hand_img"
             />
-            <h1
-              style={{
-                position: "absolute",
-                top: 100,
-                left: 40,
-                color: "white",
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Dynamically render board depending on number of players in-game
+  function renderBoard() {
+    const ifPlayer = player.role === null ? 0 : 1;
+    switch (otherPlayers.length + ifPlayer) {
+      case 2:
+        return twoPlayerBoard();
+      case 3:
+        return threePlayerBoard();
+      case 4:
+        return fourPlayerBoard();
+      default:
+        break;
+    }
+  }
+
+  function renderAtkCntCards() {
+    return (
+      <div className="atk-cnt-cards_container">
+        <h4 style={{ margin: 8 }}>Attacking Cards:</h4>
+        <div className="atk-cnt-cards_list">
+          {counteredCards.map((cards, index) => (
+            <div key={index} className="cnt-cards_pair-container">
+              <Card card={cards.attackerCard} />
+              <div className="cnt-cards-pair_second-card">
+                <Card card={cards.defenderCard} />
+              </div>
+            </div>
+          ))}
+          {attackingCards.map((card, index) => (
+            <div
+              key={index}
+              className={attackerCard === card ? "selected-atk-card" : "atk-card"}
+              onClick={() => {
+                handleAttackerCardClick(card);
               }}
             >
-              {numCardsDeck}
-            </h1>
-          </div>
-          <PlayerGraph />
+              <Card card={card} />
+            </div>
+          ))}
         </div>
-        <div>
-          <h2>Attacking Cards:</h2>
-          <div style={{ display: "flex", flexDirection: "row" }}>
-            {attackingCards.map((card, index) => (
-              <div
-                key={index}
-                //Card given CSS class 'selected' when set as attackerCard
-                className={attackerCard === card ? "selected" : ""}
-                onClick={() => {
-                  handleAttackerCardClick(card);
-                }}
-              >
-                <Card card={card} />
-              </div>
-            ))}
-          </div>
-        </div>
-        {renderHand()}
       </div>
-      {counteredCards.length > 0 && showCounteredCards()}
-    </div>
-  );
-}
+    );
+  }
 
+  function renderDeckAndTsarCard() {
+    return (
+      <div className="stack-container">
+        <div className="stack_tsar-card">
+          <Card card={tsarCard} />
+        </div>
+        <div className="stack-deck">
+          <img src="../../assets/backside_card.jpg" className="column_card-img"/>
+          <h2 className="stack_deck-length">{numCardsDeck}</h2>
+        </div>
+    </div>
+    )
+  }
+
+  function twoPlayerBoard() {
+    return (
+      <div className="whole_two-player_board">
+        <div className="horizontal-player_container">
+          {returnHorizontalPlayer(otherPlayers[0])}
+        </div>
+        <div className="two-player_board-middle">
+          {renderDeckAndTsarCard()}
+          {renderAtkCntCards()}
+        </div>
+        <div className="horizontal-player_container">
+          {player.role ? renderHand() : returnHorizontalPlayer(otherPlayers[1])}
+        </div>
+      </div>
+    );
+  }
+
+  function threePlayerBoard() {
+    return (
+      <div className="mult_player-board-container">
+        <div className="column-player_container">
+          {returnColumnPlayer(otherPlayers[0])}
+        </div>
+        <div className="mult_player-board_middle-col">
+          <div className="three_player-board_middle">
+            {renderDeckAndTsarCard()}
+            {renderAtkCntCards()}
+          </div>
+          <div className="horizontal-player_container">
+            {player.role
+              ? renderHand()
+              : returnHorizontalPlayer(otherPlayers[2])}
+          </div>
+        </div>
+        <div className="column-player_container">
+          {returnColumnPlayer(otherPlayers[1])}
+        </div>
+      </div>
+    );
+  }
+
+  function fourPlayerBoard() {
+    return (
+      <div className="mult_player-board-container">
+        <div className="column-player_container">
+          {returnColumnPlayer(otherPlayers[0])}
+        </div>
+        <div className="mult_player-board_middle-col">
+          <div className="horizontal-player_container">
+            {returnHorizontalPlayer(otherPlayers[1])}
+          </div>
+          <div className="four_player-board_middle">
+            {renderDeckAndTsarCard()}
+            {renderAtkCntCards()}
+          </div>
+          <div className="horizontal-player_container">
+            {player.role
+              ? renderHand()
+              : returnHorizontalPlayer(otherPlayers[3])}
+          </div>
+        </div>
+        <div className="column-player_container">
+          {returnColumnPlayer(otherPlayers[2])}
+        </div>
+      </div>
+    );
+  }
+
+  return renderBoard();
+}
 export default Board;

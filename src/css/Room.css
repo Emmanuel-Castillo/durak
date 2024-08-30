@@ -1,0 +1,15 @@
+.room_container {
+  width: 98.75%;
+  border-bottom: 1px solid black;
+  padding: 8px;
+}
+
+.room_header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.room_users-list {
+  overflow-y: auto;
+  max-height: 150px;
+}

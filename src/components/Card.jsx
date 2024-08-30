@@ -8,7 +8,7 @@ function Card({card}) {
     <img 
         src={`../assets/${card.value}_of_${card.suit}.png`} 
         alt={`${card.value} of ${card.suit}`} 
-        style={{ margin: '0 10px', width: '100px', cursor: 'pointer' }}
+        style={{ width: "75px", cursor: 'pointer', marginRight: 4 }}
   />
   )
 };

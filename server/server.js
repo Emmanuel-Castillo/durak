@@ -19,7 +19,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin:
-      "http://localhost:3000" || "https://durak-a6f8ab3ff9e1.herokuapp.com", // Allow requests from this origin
+      "https://durak-a6f8ab3ff9e1.herokuapp.com" || "http://localhost:3000", // Allow requests from this origin
     methods: ["GET", "POST"],
   },
 });
@@ -540,6 +540,7 @@ io.on("connection", (socket) => {
       "updateGameState",
       socketRoom.gameData.gameStatus
     );
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
   });
 
   // Emits signal to all clients to perform operation with card onto attackingCards state array depending on operation
@@ -623,6 +624,8 @@ io.on("connection", (socket) => {
         io.to(socketRoom.roomName).emit("resetStates");
       } else winner.passedCards = null;
     }
+
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
     
 
     if (socketRoom.gameData.players.length === 1) {
@@ -693,6 +696,7 @@ io.on("connection", (socket) => {
         winner = player;
       return player;
     });
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
     winner && exitGame(winner, winnerPassedCards);
   });
 
@@ -720,6 +724,7 @@ io.on("connection", (socket) => {
         return player;
       }
     );
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
   });
 
   socket.on("updateName", (name) => {
@@ -745,15 +750,17 @@ io.on("connection", (socket) => {
         }
       );
       updatePlayersNames(socketRoom);
-      io.to(socketRoom.roomName).emit("updateRoom", socketRoom);
+      io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
       io.to(socketRoom.roomName).emit(
         "updateComments",
         `${temp} is now ${name}!`
       );
+      io.to(socketRoom.roomName).emit("updateRoom", socketRoom)
     } else {
       socket.emit("updateComments", `You changed your name to ${socket.name}!`);
     }
   });
+
 
   // Emit signal to all clients about length of defenders hand
   // Used for validation to face attackingCard
@@ -796,6 +803,7 @@ io.on("connection", (socket) => {
       }
       return player;
     });
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
   });
 
   // Case when defender fails to counter, assign firstPlayer with player next to defender, and the player after him as new defender
@@ -816,6 +824,7 @@ io.on("connection", (socket) => {
     mapRoleInPlayers(socketRoom);
 
     io.to(socketRoom.roomName).emit("resetStates");
+    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
   });
 
   // Case when attacker decides to end their turn
@@ -844,6 +853,7 @@ io.on("connection", (socket) => {
 
       io.to(socketRoom.roomName).emit("resetStates");
       socketRoom.gameData.numAttackers = socketRoom.gameData.players.length - 1;
+      io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
     }
   });
 
@@ -858,6 +868,12 @@ io.on("connection", (socket) => {
         (user) => user.id !== socket.id
       );
       socketRoom.numUsers = socketRoom.users.length;
+
+      if (socketRoom.numUsers === 0) {
+        rooms = rooms.filter(room => room.roomName !== socketRoom.roomName)
+        io.emit("updateRooms", rooms)
+        return
+      }
 
       // ifPlayer indicates the game is currently active
       const ifPlayer = socketRoom.gameData.players.find(
@@ -883,6 +899,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(4000 || process.env.PORT, () => {
+server.listen(process.env.PORT || 4000, () => {
   console.log("listening on server");
 });

@@ -11,3 +11,49 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* HTML elements */
+h1, h2 {
+  text-align: center;
+  text-decoration: underline;
+  margin: 0;
+  margin-bottom: 8px;
+}
+
+.h1_left-justified {
+  text-align: left;
+}
+
+h3, h4 {
+  margin: 0;
+}
+
+p {
+  margin: 8px 0 8px 0;
+}
+
+label {
+  margin-right: 4px;
+}
+
+form {
+  display: flex;
+}
+
+input {
+  margin-right: 4px;
+}
+
+button {
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.button_margin-right {
+  margin-right: 8px;
+}
+
+.button_margin-bottom {
+  margin-bottom: 8px;
+}
+

@@ -1,18 +1,12 @@
+import "../css/Player.css"
 import React, { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useSocket } from "../context/SocketContext";
 import Card from "./Card";
 
-function Defender({
-  tsarCard,
-  attackerCard,
-  setAttackerCard,
-  attackingCards,
-  counteredCards,
-}) {
+function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, counteredCards}) {
   const { player } = usePlayer();
   const { socket } = useSocket();
-
   const [defenderCard, setDefenderCard] = useState(null);
   const [nextPlayerNumCards, setNextPlayerNumCards] = useState(6);
 
@@ -60,7 +54,6 @@ function Defender({
         ])
       )
     );
-
     socket.instance.emit("updateHand", player.id, addingCards, 1);
     socket.instance.emit("failedDefense", player.id);
   }
@@ -104,19 +97,8 @@ function Defender({
     // Reset both defenderCard and attackerCard
     // Emit change in number of defender cards to all other clients
     if (successfulCounter) {
-      socket.instance.emit(
-        "updateCounteredCards",
-        counteredCards,
-        attackerCard,
-        defenderCard,
-        1
-      );
-      socket.instance.emit(
-        "updateAttackingCards",
-        attackingCards,
-        attackerCard,
-        -1
-      );
+      socket.instance.emit("updateCounteredCards", counteredCards, attackerCard, defenderCard, 1);
+      socket.instance.emit( "updateAttackingCards", attackingCards, attackerCard, -1);
       socket.instance.emit("updateHand", player.id, defenderCard, -1);
       setDefenderCard(null);
       setAttackerCard(null);
@@ -131,14 +113,8 @@ function Defender({
         counteredCards.length === 0 &&
         attackingCards.length < nextPlayerNumCards
       ) {
-        socket.instance.emit(
-          "updateAttackingCards",
-          attackingCards,
-          defenderCard,
-          1,
-          player.name
-        );
-        socket.instance.emit("updateHand", player.id, defenderCard, -1);
+        socket.instance.emit("updateAttackingCards", attackingCards, defenderCard, 1, player.name);
+        socket.instance.emit("updateHand", player.id, defenderCard, 0);
         socket.instance.emit("passDefenderRole", socket.id);
         setDefenderCard(null);
       }
@@ -146,41 +122,29 @@ function Defender({
   }
 
   return (
-    <>
-      <h2>{player.name}, you're the defender!</h2>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="player-container">
+      <div className="player-hand">
         {player.hand.map((card, index) => (
           <div
             key={index}
-            className={defenderCard === card ? "selected" : ""}
+            className="player-card"
+            style={{
+              width: player.hand.length < 8 ? 'fit-content' : 40,
+            }}
+            
             onClick={() => handleDefenderCardClick(card)}
           >
             <Card card={card} />
           </div>
         ))}
       </div>
-      <div style={{display: "flex", flexDirection: "column", width: 100, height: 50, justifyContent: "space-between", marginTop: 8}}>
-        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+      <div className="player_button_list">
+        <button className="button_margin-right" onClick={() => sortCards(tsarCard)}>Sort Cards</button>
         {attackingCards.length > 0 ? (
-          <button
-            onClick={() => {
-              failedDefEndTurn();
-            }}
-          >
-            Fail Defense
-          </button>
-        ) : (
-          <></>
-        )}
+          <button onClick={() => {failedDefEndTurn();}}>Fail Defense</button>
+        ) : (<></>)}
       </div>
-    </>
+    </div>
   );
 }
-
 export default Defender;

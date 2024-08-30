@@ -1,3 +1,4 @@
+import "../css/Player.css"
 import React from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useSocket } from "../context/SocketContext";
@@ -19,32 +20,23 @@ function FirstPlayer({ tsarCard, attackingCards }) {
   }
 
   return (
-    <div>
-      <h2>FIRST PLAY! {player.name}, you're the attacker</h2>
-      <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap" }}>
+    <div className="player-container">
+      <div className="player-hand">
         {player.hand.map((card, index) => (
           <div
             key={index}
             onClick={() => {
-              socket.instance.emit(
-                "updateAttackingCards",
-                attackingCards,
-                card,
-                1,
-                player.name
-              );
+              socket.instance.emit("updateAttackingCards", attackingCards, card, 1, player.name);
               socket.instance.emit("updateHand", player.id, card, -1);
               socket.instance.emit("updateRole", player.id, "attacker");
+              socket.instance.emit("tellOthersFirstPlayDone")
             }}
           >
             <Card card={card} />
           </div>
-          
         ))}
       </div>
-      <div style={{display: "flex", flexDirection: "column", width: 100, height: 50, justifyContent: "space-between", marginTop: 8}}>
-        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
-      </div>
+      <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
     </div>
   );
 }

@@ -1,34 +1,27 @@
-import React, { useEffect, useState } from "react";
+import "../css/Room.css"
 import { useSocket } from "../context/SocketContext";
 
 function Room() {
 
   const {socket} = useSocket()
-  const [gameStarted, setGameStarted] = useState(false)
-
-  useEffect(() => {
-    socket.instance.on("gameStarted", () => {
-      setGameStarted(true)
-    })
-  }, [socket])
 
   return (
-    <div style={{ width: 500, border: "1px solid black", borderRight: "hidden" , padding: 8 }}>
-      <div style={{display: "flex", justifyContent: "space-between"}}>
+    <div className="room_container">
+      <div className="room_header">
         <div>
-          <h1 style={{ margin: 0 }}>{socket.room.roomName}</h1>
-          <h4 style={{ margin: 0 }}>
+          <h1>{socket.room.roomName}</h1>
+          <h4>
             {socket.room.numUsers} {socket.room.numUsers === 1 ? "user" : "users"}
           </h4>
         </div>
-        {!gameStarted && <button
+        <button
           onClick={() => {socket.instance.emit("leaveRoom", socket.room.roomName)}}
-        >Leave Room</button>}
+        >Leave Room</button>
       </div>
       <hr />
-      <div style={{ overflowY: "auto" }}>
+      <div className="room_users-list">
         {socket.room.users.map((user, index) => (
-          <p index={index} style={{ margin: 0, marginBottom: 8 }}>{user.name}</p>
+          <p key={index} >{user.name}</p>
         ))}
       </div>
     </div>
