@@ -63,6 +63,7 @@
 
 .horizontal-hand_img {
   width: 75px;
+  height: 108.9px;
   margin-right: 8px;
 }
 
@@ -91,13 +92,16 @@
 }
 
 .selected-atk-card {
-  transform: scale(1.25);
-  transform-origin: top left;
-  margin-right: 28px;
+  border: 2px solid red;
+  border-radius: 4px;
+  height: 108.9px;
+  margin-right: 8px;
 }
 
 .atk-card {
   margin-right: 8px;
+  width: 75px;
+  height: 108.9px;
 }
 
 

@@ -8,7 +8,6 @@ import Room from "./Room.jsx";
 const Game = () => {
   const { socket } = useSocket();
   const { player, setPlayer } = usePlayer();
-  const [players, setPlayers] = useState([]);
   const [gameState, setGameState] = useState(null);
   const [leaderBoard, setLeaderBoard] = useState([]);
 
@@ -48,10 +47,6 @@ const Game = () => {
       setGameState(state);
     });
 
-    socket.instance.on("updatePlayers", (playersNames) => {
-      setPlayers(playersNames);
-    });
-
     // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
     socket.instance.on("joiningMidGame", (gameData) => {
       setGameState("started");
@@ -76,7 +71,7 @@ const Game = () => {
   }, [socket]);
 
   function joinPlayersButton() {
-    if (players.length < 4)
+    if (socket.room.gameData.players.length < 4)
       return (
         <button
           className="button_margin-right"
@@ -117,8 +112,8 @@ const Game = () => {
 
   function renderStartGameBtn() {
     return (
-      players.length >= 2 &&
-      players.length <= 4 &&
+      socket.room.gameData.players.length >= 2 &&
+      socket.room.gameData.players.length <= 4 &&
       player.role === "player" && (
         <button onClick={() => socket.instance.emit("startGame")}>
           Start Game
@@ -148,15 +143,18 @@ const Game = () => {
         return <Board leaderBoard={leaderBoard} />;
       case "ended":
         return (
-          <>
+          <div className="leaderboard">
             <LeaderBoard leaderBoard={leaderBoard} />
-            <button onClick={() => socket.instance.emit("nextGame")}>
-              Next Game
-            </button>
-            <button onClick={() => socket.instance.emit("newGame")}>
-              New Game
-            </button>
-          </>
+            <div>
+              <button onClick={() => socket.instance.emit("nextGame")}>
+                Next Game
+              </button>
+              <button className="button_margin-left" onClick={() => socket.instance.emit("newGame")}>
+                New Game
+              </button>
+            </div>
+            
+          </div>
         );
       default:
         return (

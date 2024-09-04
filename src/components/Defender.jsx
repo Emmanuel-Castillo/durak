@@ -9,6 +9,20 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
   const { socket } = useSocket();
   const [defenderCard, setDefenderCard] = useState(null);
   const [nextPlayerNumCards, setNextPlayerNumCards] = useState(6);
+  const [cardWidth, setCardWidth] = useState()
+  const [cardMargin, setCardMargin] = useState(4)
+  const playerHandWidth = 750
+
+  useEffect(() => {
+    if (player.hand.length > 8){
+      setCardWidth(playerHandWidth  / player.hand.length)
+      setCardMargin()
+    }
+    else {
+      setCardWidth()
+      setCardMargin(4)
+    }
+  },[player])
 
   useEffect(() => {
     if (!socket?.instance) return;
@@ -35,7 +49,7 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
       else if (a.suit !== tsarCard.suit && b.suit === tsarCard.suit) return -1;
       else return a.rank - b.rank;
     });
-    socket.instance.emit("updateHand", player.id, sortedCards, 1);
+    socket.instance.emit("updateHand", sortedCards, 1);
   }
 
   // Sets defenderCard if card is selected from defenders hand
@@ -54,7 +68,7 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
         ])
       )
     );
-    socket.instance.emit("updateHand", player.id, addingCards, 1);
+    socket.instance.emit("updateHand", addingCards, 1);
     socket.instance.emit("failedDefense", player.id);
   }
 
@@ -99,7 +113,7 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
     if (successfulCounter) {
       socket.instance.emit("updateCounteredCards", counteredCards, attackerCard, defenderCard, 1);
       socket.instance.emit( "updateAttackingCards", attackingCards, attackerCard, -1);
-      socket.instance.emit("updateHand", player.id, defenderCard, -1);
+      socket.instance.emit("updateHand", defenderCard, -1);
       setDefenderCard(null);
       setAttackerCard(null);
     }
@@ -114,7 +128,7 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
         attackingCards.length < nextPlayerNumCards
       ) {
         socket.instance.emit("updateAttackingCards", attackingCards, defenderCard, 1, player.name);
-        socket.instance.emit("updateHand", player.id, defenderCard, 0);
+        socket.instance.emit("updateHand", defenderCard, 0);
         socket.instance.emit("passDefenderRole", socket.id);
         setDefenderCard(null);
       }
@@ -123,25 +137,28 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
 
   return (
     <div className="player-container">
-      <div className="player-hand">
+      <div className="player-hand" style={{maxWidth: playerHandWidth}}>
         {player.hand.map((card, index) => (
           <div
             key={index}
             className="player-card"
             style={{
-              width: player.hand.length < 8 ? 'fit-content' : 40,
+              width: cardWidth,
+              marginLeft: index === 0 ? 0 : cardMargin,
+              marginRight:  index === player.hand.length - 1 ? 0 : cardMargin
             }}
-            
-            onClick={() => handleDefenderCardClick(card)}
           >
-            <Card card={card} />
+            <div className="card-wrapper"
+            style={{border: card === defenderCard && "2px solid blue"}}onClick={() => handleDefenderCardClick(card)}>
+              <Card card={card}/>
+            </div>
           </div>
         ))}
       </div>
-      <div className="player_button_list">
-        <button className="button_margin-right" onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+      <div className="player_button-list">
+        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
         {attackingCards.length > 0 ? (
-          <button onClick={() => {failedDefEndTurn();}}>Fail Defense</button>
+          <button className="button_margin-left" onClick={() => {failedDefEndTurn();}}>Fail Defense</button>
         ) : (<></>)}
       </div>
     </div>

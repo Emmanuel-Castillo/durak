@@ -6,9 +6,8 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
-import LeaderBoard from "./LeaderBoard";
 
-function Board({ leaderBoard }) {
+function Board() {
   // Client socket that receives emitted signals from server
   const { socket } = useSocket();
   const { player } = usePlayer();
@@ -179,6 +178,9 @@ function Board({ leaderBoard }) {
 
   // Render the other player on the horizontal HTML element
   function returnHorizontalPlayer(player) {
+    var cardWidth
+    if (player.hand.length > 8)
+      cardWidth = 750 / player.hand.length
     return (
       <div className="row-container">
         <div className="player-info">
@@ -187,11 +189,19 @@ function Board({ leaderBoard }) {
           <p>{player?.hand.length} cards</p>
         </div>
         <div className="horizontal-hand_container">
-          {player?.hand.map(() => (
+          {player?.hand.map((index) => (
+            <div
+            className="other-player_card"
+            style={{
+              width: cardWidth,
+            }}
+          >
             <img
               src="../../assets/backside_card.jpg"
               className="horizontal-hand_img"
             />
+          </div>
+            
           ))}
         </div>
       </div>
@@ -200,7 +210,7 @@ function Board({ leaderBoard }) {
 
   // Dynamically render board depending on number of players in-game
   function renderBoard() {
-    const ifPlayer = player.role === null ? 0 : 1;
+    const ifPlayer = (player.role === null || player.role === "winner" || player.role === "spectator") ? 0 : 1;
     switch (otherPlayers.length + ifPlayer) {
       case 2:
         return twoPlayerBoard();
@@ -219,7 +229,7 @@ function Board({ leaderBoard }) {
         <h4 style={{ margin: 8 }}>Attacking Cards:</h4>
         <div className="atk-cnt-cards_list">
           {counteredCards.map((cards, index) => (
-            <div key={index} className="cnt-cards_pair-container">
+            <div className="cnt-cards_pair-container">
               <Card card={cards.attackerCard} />
               <div className="cnt-cards-pair_second-card">
                 <Card card={cards.defenderCard} />
@@ -228,7 +238,6 @@ function Board({ leaderBoard }) {
           ))}
           {attackingCards.map((card, index) => (
             <div
-              key={index}
               className={attackerCard === card ? "selected-atk-card" : "atk-card"}
               onClick={() => {
                 handleAttackerCardClick(card);

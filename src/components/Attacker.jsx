@@ -9,6 +9,20 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
   const {player} = usePlayer();
   const [pressedEndTurn, setPressedEndTurn] = useState(false)
   const [numDefenderCards, setNumDefenderCards] = useState(6);
+  const [cardWidth, setCardWidth] = useState()
+  const [cardMargin, setCardMargin] = useState(4)
+  const playerHandWidth = 750
+
+  useEffect(() => {
+    if (player.hand.length > 8){
+      setCardWidth(playerHandWidth  / player.hand.length)
+      setCardMargin()
+    }
+    else {
+      setCardWidth()
+      setCardMargin(4)
+    }
+  },[player])
 
   // Will run once for all attackers once this component mounts
   useEffect(() => {
@@ -36,7 +50,7 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
       else if (a.suit !== tsarCard.suit && b.suit === tsarCard.suit) return -1;
       else return a.rank - b.rank;
     });
-    socket.instance.emit("updateHand", player.id, sortedCards, 1);
+    socket.instance.emit("updateHand", sortedCards, 1);
   }
 
   function checkToDraw(card) {
@@ -51,7 +65,7 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
       attackingCards.length < maxCardsToFace)
     ) {
       socket.instance.emit("updateAttackingCards", attackingCards, card, 1, player.name);
-      socket.instance.emit("updateHand", player.id, card, -1);
+      socket.instance.emit("updateHand", card, -1);
     }
   }
 
@@ -61,6 +75,12 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
         {player.hand.map((card, index) => (
           <div
             key={index}
+            className="player-card"
+            style={{
+              width: cardWidth,
+              marginLeft: index === 0 ? 0 : cardMargin,
+              marginRight:  index === player.hand.length - 1 ? 0 : cardMargin
+            }}
             onClick={() => checkToDraw(card)}
           >
             <Card card={card} />
@@ -68,9 +88,9 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
         ))}
       </div>
       <div className="player_button-list">
-        <button className="button_margin-right" onClick={() => sortCards(tsarCard)}>Sort Cards</button>
+        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
         {(attackingCards.length === 0 && !pressedEndTurn) && (
-        <button onClick={() => {socket.instance.emit("endAttackerTurn", player.name)
+        <button className="button_left-margin" onClick={() => {socket.instance.emit("endAttackerTurn", player.name)
           setPressedEndTurn(true)
         }}>End Turn</button>
       )}

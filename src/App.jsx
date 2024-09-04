@@ -7,7 +7,7 @@ import Modal from "./components/Modal";
 
 const App = () => {
   const { socket, joinRoom } = useSocket();
-  const [name, setName] = useState();
+  const [name, setName] = useState('');
   const [rooms, setRooms] = useState([]);
   const [toggleModal, setToggleModal] = useState(false);
   const [toggleRoomBox, setToggleRoomBox] = useState(false);
