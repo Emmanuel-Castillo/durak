@@ -19,7 +19,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin:
-      "https://durak-a6f8ab3ff9e1.herokuapp.com" || "http://localhost:3000", // Allow requests from this origin
+      "http://localhost:3000" || "https://durak-a6f8ab3ff9e1.herokuapp.com", // Allow requests from this origin
     methods: ["GET", "POST"],
   },
 });
@@ -29,21 +29,6 @@ const createDeck = require("./deck");
 
 // Array of rooms
 var rooms = [];
-
-// // Array of players
-// var players = [];
-// var firstPlayer;
-// var defender;
-// var winners = [];
-
-// // Count of attackers
-// var numAttackers = 0;
-
-// Deck
-var deck;
-
-// Game started
-// var gameStarted = false;
 
 // Shuffling deck function
 function shuffleDeck(deck) {
@@ -55,14 +40,6 @@ function shuffleDeck(deck) {
     deck[j] = temp;
   }
   return deck;
-}
-
-// Update players names
-function updatePlayersNames(socketRoom) {
-  const playersNames = socketRoom.gameData.players.map((player) => {
-    return player.name;
-  });
-  io.to(socketRoom.roomName).emit("updatePlayers", playersNames);
 }
 
 // First player is determined before calling function
@@ -223,15 +200,11 @@ io.on("connection", (socket) => {
     // If game has started, user is a spectator. Send game data over
     switch (socketRoom.gameData.gameStatus) {
       case "started":
-        console.log(
-          "Game has already started, sending game data to the new spectator."
-        );
         socket.emit("updateRole", "spectator")
         socket.emit("joiningMidGame", socketRoom.gameData);
         break;
 
       case "ended":
-        console.log("Game has ended... only sending the winners array to user");
         socket.emit("joiningEndGame", socketRoom.gameData.winners);
         break;
 
@@ -256,7 +229,7 @@ io.on("connection", (socket) => {
       (player) => player.id === socket.id
     );
 
-    if (ifPlayer) {
+    if (ifPlayer && leftRoom.gameData.gameStatus === "started") {
       leftRoom.gameData.gameStatus = "crashed";
       leftRoom.gameData.players = [];
       leftRoom.gameData.winners = [];
@@ -289,9 +262,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const foundPlayer = socketRoom.gameData.players.find(
-      (player) => player?.id === socket.id
-    );
+    const foundPlayer = socketRoom.gameData.players.find((player) => player?.id === socket.id);
     if (foundPlayer) {
       io.to(socketRoom.roomName).emit(
         "updateComments",
@@ -308,35 +279,30 @@ io.on("connection", (socket) => {
       nextPlayer: "",
       index: socketRoom.gameData.players.length,
     });
-
     socket.emit("changeRole", "player");
     io.to(socketRoom.roomName).emit(
       "updateComments",
       `${socket.name} has joined the game!`
     );
 
-    updatePlayersNames(socketRoom);
+    io.to(socketRoom.roomName).emit("updateRoom", socketRoom)
   });
-
+  
   socket.on("joinSpectators", () => {
     const socketRoom = rooms.find((room) => room.roomName === socket.room);
+
     // IF in players array, remove it and hand the player the spectator role
-    const foundPlayer = socketRoom.gameData.players.find(
-      (player) => player?.id === socket.id
+    socketRoom.gameData.players = socketRoom.gameData.players.filter(
+      (player) => player.id !== socket.id
     );
-    if (foundPlayer) {
-      socketRoom.gameData.players = socketRoom.gameData.players.filter(
-        (player) => player.id !== socket.id
-      );
-      updatePlayersNames(socketRoom);
-    }
     socket.emit("changeRole", "spectator");
     io.to(socketRoom.roomName).emit(
       "updateComments",
       `${socket.name} is now a spectator!`
     );
+    io.to(socketRoom.roomName).emit("updateRoom", socketRoom)
   });
-
+  
   // Server receives 'startGame' signal from any client socket
   socket.on("startGame", () => {
     const socketRoom = rooms.find((room) => room.roomName === socket.room);
@@ -421,7 +387,6 @@ io.on("connection", (socket) => {
         "numCardsDeck",
         socketRoom.gameData.deck.length
       );
-      updatePlayersNames(socketRoom);
 
       io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
     }
@@ -510,7 +475,6 @@ io.on("connection", (socket) => {
         "numCardsDeck",
         socketRoom.gameData.deck.length
       );
-      updatePlayersNames(socketRoom);
 
       socketRoom.gameData.winners = [];
       io.to(socketRoom.roomName).emit(
@@ -653,12 +617,12 @@ io.on("connection", (socket) => {
     }
   }
 
-  socket.on("updateHand", (playerId, card, operation) => {
+  socket.on("updateHand", (card, operation) => {
     const socketRoom = rooms.find((room) => room.roomName === socket.room);
     var winner;
     var winnerPassedCards = false
     socketRoom.gameData.players = socketRoom.gameData.players.map((player) => {
-      if (player.id === playerId) {
+      if (player.id === socket.id) {
         switch (operation) {
           case 1:
             player.hand = card;
@@ -667,7 +631,6 @@ io.on("connection", (socket) => {
           // Needed to see if defender exits game in this scenario -> turn continues
           case 0:
             winnerPassedCards = true;
-            console.log(winnerPassedCards);
           case -1:
             player.hand = player.hand.filter(
               (c) => c.rank !== card.rank || c.suit !== card.suit
@@ -690,7 +653,7 @@ io.on("connection", (socket) => {
         } else if (player.id === socketRoom.gameData.firstPlayer.id) {
           socketRoom.gameData.firstPlayer.hand = player.hand;
         }
-        io.to(playerId).emit("changeHand", player.hand);
+        socket.emit("changeHand", player.hand);
       }
       if (player.hand.length === 0 && socketRoom.gameData.deck.length === 0)
         winner = player;
@@ -700,13 +663,13 @@ io.on("connection", (socket) => {
     winner && exitGame(winner, winnerPassedCards);
   });
 
-  socket.on("updateRole", (playerId, role) => {
+  socket.on("updateRole", (role) => {
     const socketRoom = rooms.find((room) => room.roomName === socket.room);
     socketRoom.gameData.players = socketRoom.gameData.players.map(
       (player, index) => {
-        if (player.id === playerId) {
+        if (player.id === socket.id) {
           player.role = role;
-          io.to(playerId).emit("changeRole", player.role);
+          socket.emit("changeRole", player.role);
 
           if (role === "defender") {
             const nextPlayerNumCards =
@@ -718,7 +681,7 @@ io.on("connection", (socket) => {
               "numDefenderCards",
               player.hand.length
             );
-            io.to(playerId).emit("numNextPlayerCards", nextPlayerNumCards);
+            socket.emit("numNextPlayerCards", nextPlayerNumCards);
           }
         }
         return player;
@@ -742,14 +705,11 @@ io.on("connection", (socket) => {
       });
       socketRoom.gameData.players = socketRoom.gameData.players.map(
         (player) => {
-          if (player.id === socket.id) {
+          if (player.id === socket.id)
             player.name = name;
-            socket.emit("changeName", player.name);
-          }
           return player;
         }
       );
-      updatePlayersNames(socketRoom);
       io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
       io.to(socketRoom.roomName).emit(
         "updateComments",
@@ -876,11 +836,9 @@ io.on("connection", (socket) => {
       }
 
       // ifPlayer indicates the game is currently active
-      const ifPlayer = socketRoom.gameData.players.find(
-        (player) => player.id === socket.id
-      );
+      const ifPlayer = socketRoom.gameData.players.find(player => player.id === socket.id);
 
-      if (ifPlayer) {
+      if (ifPlayer && socketRoom.gameData.gameStatus === "started") {
         socketRoom.gameData.gameStatus = "crashed";
         socketRoom.gameData.players = [];
         socketRoom.gameData.winners = [];
@@ -899,6 +857,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(process.env.PORT || 4000, () => {
+server.listen(4000 || process.env.PORT, () => {
   console.log("listening on server");
 });
