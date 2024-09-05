@@ -626,6 +626,7 @@ io.on("connection", (socket) => {
         switch (operation) {
           case 1:
             player.hand = card;
+            player.role === "defender" && console.log("adding cards: ", card, " to defender hand: ", player.hand)
             break;
           // Happens if defender passes cards to nextPlayer
           // Needed to see if defender exits game in this scenario -> turn continues
@@ -773,18 +774,35 @@ io.on("connection", (socket) => {
     // All players with < 6 cards must draw from deck until they have 6 again
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `${socketRoom.gameData.defender.name} has failed their defense! Beginning next turn...`
-    );
-    handCards(socketRoom);
-
-    socketRoom.gameData.firstPlayer = socketRoom.gameData.players.find(
-      (player) => player.id === socketRoom.gameData.defender.nextPlayer
+      `${socketRoom.gameData.defender.name} has failed their defense!`
     );
 
-    mapRoleInPlayers(socketRoom);
+    // Notify clients to start a 2-second timer
+    io.emit("startTimer", 2)
 
-    io.to(socketRoom.roomName).emit("resetStates");
-    io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
+    // Set a 2-second delay before starting the next turn
+    setTimeout(() => {
+      const addingCards = socketRoom.gameData.defender.hand.concat(
+        socketRoom.gameData.attackingCards.concat(
+          socketRoom.gameData.counteredCards.flatMap((cards) => [
+            cards.attackerCard,
+            cards.defenderCard,
+          ])
+        )
+      )
+      socketRoom.gameData.defender.hand = addingCards
+      socket.emit("changeHand", addingCards)
+      handCards(socketRoom);
+  
+      socketRoom.gameData.firstPlayer = socketRoom.gameData.players.find(
+        (player) => player.id === socketRoom.gameData.defender.nextPlayer
+      );
+  
+      mapRoleInPlayers(socketRoom);
+  
+      io.to(socketRoom.roomName).emit("resetStates");
+      io.to(socketRoom.roomName).emit("otherPlayers", socketRoom.gameData.players)
+    }, 2000) 
   });
 
   // Case when attacker decides to end their turn
@@ -801,7 +819,7 @@ io.on("connection", (socket) => {
       // In sequential order: firstPlayer, attackers, defender
       io.to(socketRoom.roomName).emit(
         "updateComments",
-        "Turn has ended! Beginning next turn..."
+        "Turn has ended!"
       );
       handCards(socketRoom);
 

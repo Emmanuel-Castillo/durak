@@ -29,6 +29,8 @@ function Board() {
   // Keep track of num cards in board
   const [numCardsDeck, setNumCardsDeck] = useState(36);
 
+  const [timer, setTimer] = useState()
+
   useEffect(() => {
     if (!socket.instance) return;
 
@@ -37,6 +39,21 @@ function Board() {
 
   useEffect(() => {
     if (!socket?.instance) return;
+
+    socket.instance.on("startTimer", (sec) => {
+      let timeLeft = sec
+      setTimer(sec)
+
+      const interval = setInterval(() => {
+        timeLeft -= 1
+        setTimer(timeLeft)
+
+        if (timeLeft <= 0) {
+          clearInterval(interval)
+          setTimer(null)
+        }
+      }, 1000)
+    })
 
     // Grab other players in the game when it begins
     // Must implement seperate fnx in for small changes in the players array, not recopy everything over
@@ -64,7 +81,6 @@ function Board() {
     });
 
     socket.instance.on("counteredCards", (cards) => {
-      console.log(counteredCards);
       setCounteredCards(cards);
     });
 
@@ -77,6 +93,7 @@ function Board() {
     });
 
     socket.instance.on("resetStates", () => {
+      console.log("reseting states")
       setAttackingCards([]);
       setCounteredCards([]);
       setAttackerCard(null);
@@ -84,6 +101,7 @@ function Board() {
 
     // SPECTATORS ONLY: When connecting to room mid-game, set states using current game data
     socket.instance.on("joiningMidGame", (gameData) => {
+      console.log("joining mid game")
       setOtherPlayers(gameData.players);
       setTsarCard(gameData.tsarCard);
       setAttackingCards(gameData.attackingCards);
@@ -98,6 +116,7 @@ function Board() {
       socket.instance.off("resetStates");
       socket.instance.off("joiningMidGame");
       socket.instance.off("otherPlayers");
+      socket.instance.off("startTimer")
     };
   }, [socket]);
 
@@ -155,6 +174,9 @@ function Board() {
 
   // Render the other player on the column HTML element
   function returnColumnPlayer(player) {
+    var cardHeight = 45
+    if (player.hand.length > 8)
+      cardHeight = 450 / player.hand.length
     return (
       <div className="column-container">
         <div className="player-info">
@@ -164,7 +186,8 @@ function Board() {
         </div>
         <div className="column_card-hand">
           {player?.hand.map(() => (
-            <div className="column_card-container">
+            <div className="column_card-container"
+            style={{height: cardHeight}}>
               <img
                 src="../../assets/backside_card.jpg"
                 className="column_card-img"
@@ -226,6 +249,7 @@ function Board() {
   function renderAtkCntCards() {
     return (
       <div className="atk-cnt-cards_container">
+        {timer && renderTimer()}
         <h4 style={{ margin: 8 }}>Attacking Cards:</h4>
         <div className="atk-cnt-cards_list">
           {counteredCards.map((cards, index) => (
@@ -262,6 +286,15 @@ function Board() {
           <h2 className="stack_deck-length">{numCardsDeck}</h2>
         </div>
     </div>
+    )
+  }
+
+  function renderTimer() {
+    return (
+      <div className="timer">
+        <h1 className="timer_time">{timer} {timer === 1 ? "second" : "seconds"}</h1>
+        <h2 className="timer_description">{player.role !== "defender" ? "Defender has failed their turn!\nYou may throw in additional cards before the next turn..." : "You have failed this turn!\nAttackers may throw in additional cards before the next turn..."}</h2>
+      </div>
     )
   }
 

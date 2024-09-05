@@ -20,6 +20,7 @@
   opacity: 0.4;
   border-radius: 8px;
   color: white;
+  z-index: 10;
 }
 
 .player-name {
@@ -44,6 +45,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  max-height: 450px;
 }
 
 .column_card-container {
@@ -155,6 +157,7 @@
   height: 50%;
   border: 1px solid black;
   display: flex;
+  position: relative;
 }
 
 /* threePlayerBoard() */
@@ -181,6 +184,7 @@
   height: 75%;
   border: 1px solid black;
   display: flex;
+  position: relative;
 }
 
 /* fourPlayerBoard() */
@@ -188,7 +192,21 @@
   height: 50%;
   border: 1px solid black;
   display: flex;
+  position: relative;
 }
 
+/* renderTimer() */
+.timer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  transform: translate(-50%,-50%);
+}
+
+.timer_time, .timer_description {
+  text-decoration: none;
+  color: red;
+}
 
 

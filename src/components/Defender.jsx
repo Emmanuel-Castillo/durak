@@ -34,13 +34,14 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
     socket.instance.on("numNextPlayerCards", (num) => {
       setNextPlayerNumCards(num);
     });
+    
   }, [socket]);
-
+  
   useEffect(() => {
     if (attackerCard && defenderCard) counterAttackingCards();
     else if (!attackerCard && defenderCard) passOverCards();
   }, [attackerCard, defenderCard]);
-
+  
   // Function sorts cards, accessible to all players
   // Sorts by rank (tsarCard suit has higher priority than all other suits)
   function sortCards(tsarCard) {
@@ -51,31 +52,22 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
     });
     socket.instance.emit("updateHand", sortedCards, 1);
   }
-
+  
   // Sets defenderCard if card is selected from defenders hand
   function handleDefenderCardClick(card) {
     setDefenderCard((prevCard) => (prevCard === card ? null : card));
   }
-
+  
   // If defender fails to defend, add all cards on attackingCards and/or counteredCards array to their hand and assign role to attacker for the next turn
   // Emit signal to server to prepare for next turn
   function failedDefEndTurn() {
-    const addingCards = player.hand.concat(
-      attackingCards.concat(
-        counteredCards.flatMap((cards) => [
-          cards.attackerCard,
-          cards.defenderCard,
-        ])
-      )
-    );
-    socket.instance.emit("updateHand", addingCards, 1);
-    socket.instance.emit("failedDefense", player.id);
+    socket.instance.emit("failedDefense");
   }
-
+  
   // Called when either attackingCard or defenderCard is selected/deselected by the defender
   const counterAttackingCards = () => {
     let successfulCounter = false;
-
+    
     // Case if attackerCard suit is same as tsar suit
     if (attackerCard.suit === tsarCard.suit) {
       // If defender card suit is also the same and has higher rank than attacker's
