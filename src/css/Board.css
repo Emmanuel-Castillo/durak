@@ -202,6 +202,7 @@
   left: 50%;
   width: 50%;
   transform: translate(-50%,-50%);
+  z-index: 10;
 }
 
 .timer_time, .timer_description {

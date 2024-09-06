@@ -62,7 +62,7 @@ function Attacker({ tsarCard, attackingCards, counteredCards }) {
             cards.attackerCard.rank === card.rank ||
             cards.defenderCard.rank === card.rank
         ) &&
-      attackingCards.length < maxCardsToFace)
+      (attackingCards.length + counteredCards.length) < maxCardsToFace)
     ) {
       socket.instance.emit("updateAttackingCards", attackingCards, card, 1, player.name);
       socket.instance.emit("updateHand", card, -1);

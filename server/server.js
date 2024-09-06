@@ -793,6 +793,9 @@ io.on("connection", (socket) => {
       socketRoom.gameData.defender.hand = addingCards
       socket.emit("changeHand", addingCards)
       handCards(socketRoom);
+
+      socketRoom.gameData.attackingCards = [];
+      socketRoom.gameData.counteredCards = [];
   
       socketRoom.gameData.firstPlayer = socketRoom.gameData.players.find(
         (player) => player.id === socketRoom.gameData.defender.nextPlayer
