@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSocket } from "../context/SocketContext.js";
 import { usePlayer } from "../context/PlayerContext.js";
+import { useRoom } from "../context/RoomContext";
 import Board from "./Board.jsx";
 import LeaderBoard from "./LeaderBoard.jsx";
 import Room from "./Room.jsx";
@@ -8,70 +9,67 @@ import Room from "./Room.jsx";
 const Game = () => {
   const { socket } = useSocket();
   const { player, setPlayer } = usePlayer();
-  const [gameState, setGameState] = useState(null);
-  const [leaderBoard, setLeaderBoard] = useState([]);
-
-  // Called when mounted once. Intended for spectators to check server if game has started
-  useEffect(() => {
-    if (!socket.instance) return;
-
-    socket.instance.emit("hasGameStarted");
-  }, []);
+  const { room, setRoom } = useRoom();
 
   // socket effects to each player
   useEffect(() => {
     if (!socket?.instance) return;
+
+    socket.instance.on("setPlayer", (player) => {
+      setPlayer(player)
+    })
 
     // player gets their stats beginning of game
     socket.instance.on("startingStats", (newPlayer) => {
       setPlayer(newPlayer);
     });
 
-    socket.instance.on("changeName", (name) => {
-      setPlayer((prevPlayer) => ({ ...prevPlayer, name: name }));
+    socket.instance.on("updateRoomUsers", (newUsers) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        users: newUsers
+      }))
+    } )
+
+    socket.instance.on("updateGameDataPlayers", (newPlayers) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          players: newPlayers
+        }
+      }))
+    })
+
+    socket.instance.on("updateGameStatus", (status) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          gameStatus: status
+        }
+      }))
     });
 
-    socket.instance.on("changeHand", (cards) => {
-      setPlayer((prevPlayer) => ({ ...prevPlayer, hand: cards }));
-    });
-
-    socket.instance.on("changeRole", (role) => {
-      setPlayer((prevPlayer) => ({ ...prevPlayer, role: role }));
-    });
-
-    socket.instance.on("leaderBoard", (winners) => {
-      setLeaderBoard(winners);
-    });
-
-    socket.instance.on("updateGameState", (state) => {
-      setGameState(state);
-    });
-
-    // if spectator connects to room mid-game, set gamePlayable and gameStarted to true
-    socket.instance.on("joiningMidGame", (gameData) => {
-      setGameState("started");
-      setLeaderBoard(gameData.winners);
-    });
-
-    socket.instance.on("joiningEndGame", (winners) => {
-      setGameState("ended");
-      setLeaderBoard(winners);
-    });
+    socket.instance.on("updateGameData", (newGameData) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: newGameData
+      }))
+    })
 
     return () => {
       socket.instance.off("startingStats");
       socket.instance.off("changeName");
-      socket.instance.off("changeHand");
-      socket.instance.off("changeRole");
-      socket.instance.off("updateGameStatus");
-      socket.instance.off("leaderBoard");
-      socket.instance.off("joiningMidGame");
-      socket.instance.off("joiningEndGame");
+      socket.instance.off("updateRoomUsers");
+      socket.instance.off("updateGameDataPlayers");
+      socket.instance.off("updateGameState");
+      socket.instance.off("updateGameData");
     };
   }, [socket]);
 
   function joinPlayersButton() {
-    if (socket.room.gameData.players.length < 4)
+    if (room?.gameData.players.length < 4)
       return (
         <button
           className="button_margin-right"
@@ -95,26 +93,16 @@ const Game = () => {
   }
 
   function renderWaitForGameDiv() {
-    switch (player.role) {
-      case "player":
-        return <p>You will be playing the game...</p>;
-      case "spectator":
-        return <p>You will be spectating the game...</p>;
-      default:
-        return (
-          <p>
-            Select whether to play or spectate. If game starts without a
-            decision made, you will turn into a spectator.
-          </p>
-        );
-    }
+    if (player)
+      return <p>You will be playing the game...</p>
+    return <p>You will be spectating the game...</p>
   }
 
   function renderStartGameBtn() {
     return (
-      socket.room.gameData.players.length >= 2 &&
-      socket.room.gameData.players.length <= 4 &&
-      player.role === "player" && (
+      room.gameData.players.length >= 2 &&
+      room.gameData.players.length <= 4 &&
+      player && (
         <button onClick={() => socket.instance.emit("startGame")}>
           Start Game
         </button>
@@ -123,11 +111,11 @@ const Game = () => {
   }
 
   function renderGame() {
-    switch (gameState) {
+    switch (room.gameData.gameStatus) {
       case "crashed":
         return (
           <>
-            {socket && socket.room && <Room />}
+            <Room />
             <div style={{ padding: 8 }}>
               <h1 className="h1_left-justified">
                 Game Crashed because a player left! Must restart game...
@@ -140,11 +128,11 @@ const Game = () => {
           </>
         );
       case "started":
-        return <Board leaderBoard={leaderBoard} />;
+        return <Board/>;
       case "ended":
         return (
           <div className="leaderboard">
-            <LeaderBoard leaderBoard={leaderBoard} />
+            <LeaderBoard/>
             <div>
               <button onClick={() => socket.instance.emit("nextGame")}>
                 Next Game
@@ -159,7 +147,7 @@ const Game = () => {
       default:
         return (
           <>
-            {socket && socket.room && <Room />}
+            <Room />
             <div style={{ padding: 8 }}>
               {joinPlayersButton()}
               {joinSpectatorsButton()}

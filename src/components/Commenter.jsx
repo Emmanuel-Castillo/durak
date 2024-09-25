@@ -28,8 +28,7 @@ function Commenter() {
     <div className="commenter-wrapper">
       <div className="comments-list">
         {comments.map((comment, index) => (
-          <p key={index} className="comment">
-            {comment}
+          <p key={index} className="comment" dangerouslySetInnerHTML={{ __html: comment }} >
           </p>
         ))}
         {toggleRef && <div ref={commentsEndRef} />}
@@ -37,16 +36,15 @@ function Commenter() {
       <div className="user-input_box">
         <div className="commenter-options">
           <button className="button_margin-bottom" onClick={() => setComments([])}>Clear</button>
-          <button className={toggleRef && "lock-btn_selected"} onClick={() => setToggleRef(!toggleRef)}>Lock</button>
+          <button className={toggleRef && "btn_selected"} onClick={() => setToggleRef(!toggleRef)}>Lock</button>
         </div>
 
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (message && message.length >= 0) {
-              socket.instance.emit("sendMessage", message);
-              setMessage("");
-            }
+            if (message === "") return
+            socket.instance.emit("sendMessage", message);
+            setMessage("");
           }}
         >
           <input

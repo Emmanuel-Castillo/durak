@@ -66,3 +66,8 @@ button {
   margin-bottom: 8px;
 }
 
+.btn_selected {
+  background-color: grey;
+  color: white;
+}
+

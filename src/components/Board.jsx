@@ -6,48 +6,54 @@ import { usePlayer } from "../context/PlayerContext";
 import FirstPlayer from "./FirstPlayer";
 import Attacker from "./Attacker";
 import Defender from "./Defender";
+import { useRoom } from "../context/RoomContext";
 
 function Board() {
   // Client socket that receives emitted signals from server
   const { socket } = useSocket();
-  const { player } = usePlayer();
+  const { player, setPlayer } = usePlayer();
+  const {room, setRoom} = useRoom()
+
+  const [attackerCard, setAttackerCard] = useState(null);
 
   const [otherPlayers, setOtherPlayers] = useState([]);
 
-  // Deck information
-  const [tsarCard, setTsarCard] = useState(null);
-
-  // Attacking cards presented by server
-  const [attackingCards, setAttackingCards] = useState([]);
-
-  // Selected cards from attackingCards and client's cards, respectively
-  const [attackerCard, setAttackerCard] = useState(null);
-
-  // Card countered by client emitted by the server to every client
-  const [counteredCards, setCounteredCards] = useState([]);
-
-  // Keep track of num cards in board
-  const [numCardsDeck, setNumCardsDeck] = useState(36);
-
   const [timer, setTimer] = useState()
 
-  useEffect(() => {
-    if (!socket.instance) return;
+  // Grab other players in the game when it begins
+  // Must implement seperate fnx in for small changes in the players array, not recopy everything over
+  function createOtherPlayers() {
+    if (player) {
+      const playerIndex = room.gameData.players.findIndex((findPlayer) => findPlayer.id === player.id)
+      var greaterIndex = room.gameData.players.slice(playerIndex + 1, room.gameData.players.length)
+      var lowerIndex = room.gameData.players.slice(0, playerIndex)
 
-    if (!player.role) socket.instance.emit("hasGameStarted");
-  }, []);
+      var playersExcludingSelf = greaterIndex.concat(lowerIndex);
+      setOtherPlayers(playersExcludingSelf)
+    } else {
+      setOtherPlayers(room.gameData.players)
+    }
+  };
+
+  useEffect(() => {
+    room.gameData.players && createOtherPlayers()
+  }, [])
+
+  useEffect(() => {
+    createOtherPlayers()
+  }, [room.gameData.players])
 
   useEffect(() => {
     if (!socket?.instance) return;
-
+    
     socket.instance.on("startTimer", (sec) => {
       let timeLeft = sec
       setTimer(sec)
-
+      
       const interval = setInterval(() => {
         timeLeft -= 1
         setTimer(timeLeft)
-
+        
         if (timeLeft <= 0) {
           clearInterval(interval)
           setTimer(null)
@@ -55,68 +61,75 @@ function Board() {
       }, 1000)
     })
 
-    // Grab other players in the game when it begins
-    // Must implement seperate fnx in for small changes in the players array, not recopy everything over
-    socket.instance.on("otherPlayers", (players) => {
-      const ifPlayer = players.find(
-        (player) => player.id === socket.instance.id
-      );
-      if (ifPlayer) {
-        var greaterIndex = players.filter(
-          (player) => player.index > ifPlayer.index
-        );
-        var lowerIndex = players.filter(
-          (player) => player.index < ifPlayer.index
-        );
-
-        var playersExcludingSelf = greaterIndex.concat(lowerIndex);
-        setOtherPlayers(playersExcludingSelf);
-      } else {
-        setOtherPlayers(players);
-      }
+    socket.instance.on("changeName", (newName) => {
+      player && setPlayer((prevPlayer) => ({ ...prevPlayer, name: newName }));
+    });
+    
+    socket.instance.on("changeHand", (cards) => {
+      setPlayer((prevPlayer) => ({ ...prevPlayer, hand: cards }));
+    });
+    
+    socket.instance.on("changeRole", (newRole) => {
+      setPlayer((prevPlayer) => ({ ...prevPlayer, role: newRole }));
     });
 
     socket.instance.on("attackingCards", (cards) => {
-      setAttackingCards(cards);
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          attackingCards: cards,
+        }
+      }))
+
     });
 
     socket.instance.on("counteredCards", (cards) => {
-      setCounteredCards(cards);
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          counteredCards: cards,
+        }
+      }))
     });
 
-    socket.instance.on("tsarCard", (card) => {
-      setTsarCard(card);
-    });
-
-    socket.instance.on("numCardsDeck", (num) => {
-      setNumCardsDeck(num);
+    socket.instance.on("numCardsDeck", (length) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          deckLength: length
+        }
+      }))
     });
 
     socket.instance.on("resetStates", () => {
-      console.log("reseting states")
-      setAttackingCards([]);
-      setCounteredCards([]);
       setAttackerCard(null);
     });
 
-    // SPECTATORS ONLY: When connecting to room mid-game, set states using current game data
-    socket.instance.on("joiningMidGame", (gameData) => {
-      console.log("joining mid game")
-      setOtherPlayers(gameData.players);
-      setTsarCard(gameData.tsarCard);
-      setAttackingCards(gameData.attackingCards);
-      setCounteredCards(gameData.counteredCards);
-      setNumCardsDeck(gameData.deck.length);
-    });
+    socket.instance.on("updateWinners", (newWinners) => {
+      setRoom((prevRoom) => ({
+        ...prevRoom,
+        gameData: {
+          ...prevRoom.gameData,
+          winners: newWinners
+        }
+      }))
+    })
 
     return () => {
       socket.instance.off("attackingCards");
       socket.instance.off("counteredCards");
-      socket.instance.off("tsarCard");
       socket.instance.off("resetStates");
-      socket.instance.off("joiningMidGame");
-      socket.instance.off("otherPlayers");
+      socket.instance.off("numCardsDeck");
       socket.instance.off("startTimer")
+      socket.instance.off("changeHand")
+      socket.instance.off("changeRole")
+      socket.instance.off("updateGameDataPlayers")
+      socket.instance.off("updateGameDataPlayersNames")
+      socket.instance.off("updateGameDataPlayersHandLength")
+      socket.instance.off("updateGameDataPlayersRoles")
     };
   }, [socket]);
 
@@ -128,64 +141,42 @@ function Board() {
 
   // Dynamically render the player's hand depending on role
   function renderHand() {
-    switch (player.role) {
-      case "firstPlayer":
-      case "defender":
-      case "attacker":
-        return (
-          <div className="row-container">
-            <div className="player-info">
-              <p className="player-name white-text">{player.name}</p>
-              <p>{player.role}</p>
-              <p>{player.hand.length} cards</p>
-            </div>
-            {player.role === "firstPlayer" && (
-              <FirstPlayer
-                tsarCard={tsarCard}
-                attackingCards={attackingCards}
-              />
-            )}
-            {player.role === "attacker" && (
-              <Attacker
-                tsarCard={tsarCard}
-                attackingCards={attackingCards}
-                counteredCards={counteredCards}
-              />
-            )}
-            {player.role === "defender" && (
-              <Defender
-                tsarCard={tsarCard}
-                attackerCard={attackerCard}
-                setAttackerCard={setAttackerCard}
-                attackingCards={attackingCards}
-                counteredCards={counteredCards}
-              />
-            )}
-          </div>
-        );
-      case "spectator":
-      case "winner":
-      case "durak":
-        return <></>;
-      default:
-        break;
-    }
+    return (
+      <div className="row-container">
+        <div className="player-info">
+          <p className="player-name white-text">{player.name}</p>
+          <p>{player.role}</p>
+          <p>{player.hand.length} cards</p>
+        </div>
+        {player.role === "firstPlayer" && (
+          <FirstPlayer/>
+        )}
+        {player.role === "attacker" && (
+          <Attacker/>
+        )}
+        {player.role === "defender" && (
+          <Defender
+          attackerCard={attackerCard}
+          setAttackerCard={setAttackerCard}/>
+        )}
+      </div>
+    );
   }
 
   // Render the other player on the column HTML element
   function returnColumnPlayer(player) {
     var cardHeight = 45
-    if (player.hand.length > 8)
-      cardHeight = 450 / player.hand.length
+    if (player.handLength > 8)
+      cardHeight = 450 / player.handLength
     return (
       <div className="column-container">
         <div className="player-info">
-          <p className="player-name">{player?.name}</p>
-          <p>{player?.role}</p>
-          <p>{player?.hand.length} cards</p>
+          <p className="player-name">{player.name}</p>
+          <p>{player.role}</p>
+          <p>{player.handLength} cards</p>
         </div>
         <div className="column_card-hand">
-          {player?.hand.map(() => (
+          {Array.from({ length: player.handLength }).map((_, index) => (
             <div className="column_card-container"
             style={{height: cardHeight}}>
               <img
@@ -202,17 +193,17 @@ function Board() {
   // Render the other player on the horizontal HTML element
   function returnHorizontalPlayer(player) {
     var cardWidth
-    if (player.hand.length > 8)
-      cardWidth = 750 / player.hand.length
+    if (player.handLength > 8)
+      cardWidth = 750 / player.handLength
     return (
       <div className="row-container">
         <div className="player-info">
           <p className="player-name">{player?.name}</p>
-          <p>{player?.role}</p>
-          <p>{player?.hand.length} cards</p>
+          <p>{player.role}</p>
+          <p>{player.handLength} cards</p>
         </div>
         <div className="horizontal-hand_container">
-          {player?.hand.map((index) => (
+          {Array.from({ length: player.handLength }).map((_, index) => (
             <div
             className="other-player_card"
             style={{
@@ -233,7 +224,7 @@ function Board() {
 
   // Dynamically render board depending on number of players in-game
   function renderBoard() {
-    const ifPlayer = (player.role === null || player.role === "winner" || player.role === "spectator") ? 0 : 1;
+    const ifPlayer = player ? 1 : 0;
     switch (otherPlayers.length + ifPlayer) {
       case 2:
         return twoPlayerBoard();
@@ -247,6 +238,7 @@ function Board() {
   }
 
   function renderAtkCntCards() {
+    const { attackingCards, counteredCards } = room.gameData
     return (
       <div className="atk-cnt-cards_container">
         {timer && renderTimer()}
@@ -276,6 +268,7 @@ function Board() {
   }
 
   function renderDeckAndTsarCard() {
+    const { tsarCard, deckLength } = room.gameData
     return (
       <div className="stack-container">
         <div className="stack_tsar-card">
@@ -283,7 +276,7 @@ function Board() {
         </div>
         <div className="stack-deck">
           <img src="../../assets/backside_card.jpg" className="column_card-img"/>
-          <h2 className="stack_deck-length">{numCardsDeck}</h2>
+          <h2 className="stack_deck-length">{deckLength}</h2>
         </div>
     </div>
     )
@@ -293,7 +286,7 @@ function Board() {
     return (
       <div className="timer">
         <h1 className="timer_time">{timer} {timer === 1 ? "second" : "seconds"}</h1>
-        <h2 className="timer_description">{player.role !== "defender" ? "Defender has failed their turn!\nYou may throw in additional cards before the next turn..." : "You have failed this turn!\nAttackers may throw in additional cards before the next turn..."}</h2>
+        <h2 className="timer_description"> Defender has failed their turn!</h2>
       </div>
     )
   }
@@ -309,7 +302,7 @@ function Board() {
           {renderAtkCntCards()}
         </div>
         <div className="horizontal-player_container">
-          {player.role ? renderHand() : returnHorizontalPlayer(otherPlayers[1])}
+          {player ? renderHand() : returnHorizontalPlayer(otherPlayers[1])}
         </div>
       </div>
     );
@@ -327,7 +320,7 @@ function Board() {
             {renderAtkCntCards()}
           </div>
           <div className="horizontal-player_container">
-            {player.role
+            {player
               ? renderHand()
               : returnHorizontalPlayer(otherPlayers[2])}
           </div>
@@ -354,7 +347,7 @@ function Board() {
             {renderAtkCntCards()}
           </div>
           <div className="horizontal-player_container">
-            {player.role
+            {player
               ? renderHand()
               : returnHorizontalPlayer(otherPlayers[3])}
           </div>

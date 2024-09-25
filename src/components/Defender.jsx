@@ -2,16 +2,29 @@ import "../css/Player.css"
 import React, { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useSocket } from "../context/SocketContext";
+import { useRoom } from "../context/RoomContext"
 import Card from "./Card";
 
-function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, counteredCards}) {
-  const { player } = usePlayer();
-  const { socket } = useSocket();
+function Defender({attackerCard, setAttackerCard}) {
+  const {player} = usePlayer();
+  const {socket} = useSocket();
+  const {room} = useRoom()
   const [defenderCard, setDefenderCard] = useState(null);
-  const [nextPlayerNumCards, setNextPlayerNumCards] = useState(6);
   const [cardWidth, setCardWidth] = useState()
   const [cardMargin, setCardMargin] = useState(4)
   const playerHandWidth = 750
+  const [pressedSortCards, setPressedSortCards] = useState(false)
+
+  useEffect(() => {
+    if (!socket && !socket.instance) return
+    socket.instance.on("sortedHand", () => {
+      setPressedSortCards(true)
+    })
+
+    socket.instance.on("resetStates", () => {
+      setPressedSortCards(false)
+    })
+  }, [socket])
 
   useEffect(() => {
     if (player.hand.length > 8){
@@ -25,32 +38,20 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
   },[player])
 
   useEffect(() => {
-    if (!socket?.instance) return;
-    socket.instance.emit("numNPCards", player.id);
-  }, []);
-
-  useEffect(() => {
-    if (!socket?.instance) return;
-    socket.instance.on("numNextPlayerCards", (num) => {
-      setNextPlayerNumCards(num);
-    });
-    
-  }, [socket]);
-  
-  useEffect(() => {
-    if (attackerCard && defenderCard) counterAttackingCards();
+    if (attackerCard && defenderCard)       counterAttackingCards();
     else if (!attackerCard && defenderCard) passOverCards();
   }, [attackerCard, defenderCard]);
   
   // Function sorts cards, accessible to all players
   // Sorts by rank (tsarCard suit has higher priority than all other suits)
-  function sortCards(tsarCard) {
+  function sortCards() {
+    const { tsarCard } = room.gameData
     const sortedCards = [...player.hand].sort((a, b) => {
       if (a.suit === tsarCard.suit && b.suit !== tsarCard.suit) return 1;
       else if (a.suit !== tsarCard.suit && b.suit === tsarCard.suit) return -1;
       else return a.rank - b.rank;
     });
-    socket.instance.emit("updateHand", sortedCards, 1);
+    socket.instance.emit("updateHand", sortedCards, 10)
   }
   
   // Sets defenderCard if card is selected from defenders hand
@@ -68,6 +69,7 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
   const counterAttackingCards = () => {
     let successfulCounter = false;
     
+    const {tsarCard} = room.gameData
     // Case if attackerCard suit is same as tsar suit
     if (attackerCard.suit === tsarCard.suit) {
       // If defender card suit is also the same and has higher rank than attacker's
@@ -103,8 +105,8 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
     // Reset both defenderCard and attackerCard
     // Emit change in number of defender cards to all other clients
     if (successfulCounter) {
-      socket.instance.emit("updateCounteredCards", counteredCards, attackerCard, defenderCard, 1);
-      socket.instance.emit( "updateAttackingCards", attackingCards, attackerCard, -1);
+      socket.instance.emit("updateCounteredCards", attackerCard, defenderCard);
+      socket.instance.emit( "updateAttackingCards", attackerCard, -1);
       socket.instance.emit("updateHand", defenderCard, -1);
       setDefenderCard(null);
       setAttackerCard(null);
@@ -112,18 +114,19 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
   };
 
   function passOverCards() {
-    // Planning to pass over attacking cards to next player would assume not selecting an attacking card at all
-    // Also check if player has not countered at all
-    if (attackingCards.find((c) => c.rank === defenderCard?.rank)) {
-      if (
-        counteredCards.length === 0 &&
-        attackingCards.length < nextPlayerNumCards
-      ) {
-        socket.instance.emit("updateAttackingCards", attackingCards, defenderCard, 1, player.name);
-        socket.instance.emit("updateHand", defenderCard, 0);
-        socket.instance.emit("passDefenderRole", socket.id);
-        setDefenderCard(null);
-      }
+    var {players, attackingCards, counteredCards} = room.gameData
+    const playerIndex = players.findIndex((findPlayer) => findPlayer.id === player.id)
+    const nextPlayer = players[((playerIndex + 1) % players.length)]
+    
+    // To pass cards to next player, three conditions must past:
+    // 1. Defender must not have countered any attacking cards
+    // 2. The defender's card must have the same rank as the attacking cards'
+    // 3. The next player must have their hand length be greater or equal to the number of attacking cards + defender card passed by defender
+    if ((counteredCards.length === 0) && (attackingCards.length < nextPlayer.handLength) && (attackingCards.find((c) => c.rank === defenderCard.rank))) {
+          socket.instance.emit("updateAttackingCards", defenderCard, 1);
+          socket.instance.emit("updateHand", defenderCard, 0);
+          socket.instance.emit("passDefenderRole", socket.id);
+          setDefenderCard(null);
     }
   }
 
@@ -148,8 +151,8 @@ function Defender({tsarCard, attackerCard, setAttackerCard, attackingCards, coun
         ))}
       </div>
       <div className="player_button-list">
-        <button onClick={() => sortCards(tsarCard)}>Sort Cards</button>
-        {attackingCards.length > 0 ? (
+        <button className={pressedSortCards && "btn_selected"} onClick={() => !pressedSortCards && sortCards()}>Sort Cards</button>
+        {room.gameData.attackingCards.length > 0 ? (
           <button className="button_margin-left" onClick={() => {failedDefEndTurn();}}>Fail Defense</button>
         ) : (<></>)}
       </div>
