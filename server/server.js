@@ -19,7 +19,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin:
-      "http://localhost:3000" || "https://durak-a6f8ab3ff9e1.herokuapp.com", // Allow requests from this origin
+      "https://durak-a6f8ab3ff9e1.herokuapp.com" || "http://localhost:3000", // Allow requests from this origin
     methods: ["GET", "POST"],
   },
 });
@@ -59,7 +59,7 @@ function mapRoleInPlayers(socketRoom) {
     io.to(player.id).emit("changeRole", player.role);
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `<span>[${player.name}]:</span> Changed role to ${player.role}!`
+      `[${player.name}]: Changed role to ${player.role}!`
     );
     return player;
   });
@@ -197,7 +197,7 @@ io.on("connection", (socket) => {
   
   // Emit only to the newly connected client:
   // Comment that welcomes the client to the webpage
-  socket.emit("updateComments", `Welcome to Durak, <span>${socket.name}</span>!`);
+  socket.emit("updateComments", `Welcome to Durak, ${socket.name}!`);
   // List of available rooms to join
   updateListRooms(socket)
   
@@ -258,7 +258,7 @@ io.on("connection", (socket) => {
     // Comment to all clients in room about new user
     io.to(roomName).emit(
       "updateComments",
-      `Welcome to the room, <span>${socket.name}</span>!`
+      `Welcome to the room, ${socket.name}!`
     );
 
     // Update all clients about rooms update
@@ -319,7 +319,7 @@ io.on("connection", (socket) => {
     if (foundPlayer) {
       io.to(socketRoom.roomName).emit(
         "updateComments",
-        `<span>[${foundPlayer.name}]:</span> Already joined the game!`
+        `[${foundPlayer.name}]: Already joined the game!`
       );
       return;
     }
@@ -335,7 +335,7 @@ io.on("connection", (socket) => {
     
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `<span>[${socket.name}]:</span> Joining game!`
+      `[${socket.name}]: Joining game!`
     );
   });
   
@@ -351,7 +351,7 @@ io.on("connection", (socket) => {
 
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `<span>[${socket.name}]:</span> Am now a spectator!`
+      `[${socket.name}]: Am now a spectator!`
     );
   });
   
@@ -427,7 +427,7 @@ io.on("connection", (socket) => {
         io.to(player.id).emit("startingStats", player);
         io.to(socketRoom.roomName).emit(
           "updateComments",
-          `<span>[${player.name}]:</span> Starting role is the ${player.role}`
+          `[${player.name}]: Starting role is the ${player.role}`
         );
       });
 
@@ -509,7 +509,7 @@ io.on("connection", (socket) => {
         io.to(player.id).emit("startingStats", player);
         io.to(socketRoom.roomName).emit(
           "updateComments",
-          `<span>[${player.name}]:</span> Starting role is the ${player.role}`
+          `[${player.name}]: Starting role is the ${player.role}`
         );
       });
 
@@ -551,7 +551,7 @@ io.on("connection", (socket) => {
         attackingCards.push(card);
         io.to(socketRoom.roomName).emit(
           "updateComments",
-          `<span>[${socket.name}]:</span> Dealing the ${card.value} of ${card.suit}!`
+          `[${socket.name}]: Dealing the ${card.value} of ${card.suit}!`
         );
       } else if (operation === -1) {
         const cardIndex = attackingCards.findIndex(
@@ -574,7 +574,7 @@ io.on("connection", (socket) => {
       counteredCards.push({ attackerCard, defenderCard });
       io.to(socketRoom.roomName).emit(
         "updateComments",
-        `<span>[${socketRoom.gameData.defender.name}]:</Countered with the ${defenderCard.value} of ${defenderCard.suit}!`
+        `[${socketRoom.gameData.defender.name}]:</Countered with the ${defenderCard.value} of ${defenderCard.suit}!`
       );
 
       io.to(socketRoom.roomName).emit("counteredCards", counteredCards);
@@ -595,7 +595,7 @@ io.on("connection", (socket) => {
     io.to(socketRoom.roomName).emit("updateWinners", socketRoom.gameData.winners);
     io.to(socketRoom.roomName).emit(
     "updateComments",
-      `<span>[${winner.name}]:</span> Exiting the game!`
+      `[${winner.name}]: Exiting the game!`
     );
 
     socketRoom.gameData.players = socketRoom.gameData.players.filter(
@@ -610,7 +610,7 @@ io.on("connection", (socket) => {
       io.to(durak.id).emit("changeRole", "durak");
       io.to(socketRoom.roomName).emit(
         "updateComments",
-        `<span>[${durak.name}]:</span> Durak! Game has ended...`
+        `[${durak.name}]: Durak! Game has ended...`
       );
 
       socketRoom.gameData.winners.push(durak);
@@ -718,10 +718,10 @@ io.on("connection", (socket) => {
 
       io.to(socketRoom.roomName).emit(
         "updateComments",
-        `<span>[${temp}]:</span> Change name to ${name}!`
+        `[${temp}]: Change name to ${name}!`
       );
     } else {
-      socket.emit("updateComments", `You changed your name to ${socket.name}!`);
+      socket.emit("updateComments", `[${temp}]: Changed name to ${name}!`);
     }
   });
 
@@ -738,7 +738,7 @@ io.on("connection", (socket) => {
       } else if (player.id === nextDefender.id) {
         io.to(socketRoom.roomName).emit(
           "updateComments",
-          `<span>[${socketRoom.gameData.defender.name}]:</span> Passing the cards to <span>[{player.name}]!</span>$`
+          `[${socketRoom.gameData.defender.name}]: Passing the cards to [{player.name}]!$`
         );
         player.role = "defender";
         io.to(player.id).emit("changeRole", player.role);
@@ -757,7 +757,7 @@ io.on("connection", (socket) => {
     // All players with < 6 cards must draw from deck until they have 6 again
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `<span>[${socketRoom.gameData.defender.name}]:</span> Failed defense!`
+      `[${socketRoom.gameData.defender.name}]: Failed defense!`
     );
 
     // Notify clients to start a 2-second timer
@@ -798,7 +798,7 @@ io.on("connection", (socket) => {
     socketRoom.gameData.numAttackers--;
     io.to(socketRoom.roomName).emit(
       "updateComments",
-      `<span>[${player}]:</span> Ending their turn...`
+      `[${player}]: Ending their turn...`
     );
     if (socketRoom.gameData.numAttackers === 0) {
       // All players with < 6 cards must draw from deck until they have 6 again
@@ -824,7 +824,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (message) => {
-    io.to(socket.room || socket.id).emit("updateComments", `<span>[${socket.name}]:</span> ${message}`);
+    io.to(socket.room || socket.id).emit("updateComments", `[${socket.name}]: ${message}`);
   });
 
   socket.on("disconnect", () => {
@@ -873,6 +873,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(4000 || process.env.PORT, () => {
+server.listen(process.env.PORT || 4000, () => {
   console.log("listening on server");
 });

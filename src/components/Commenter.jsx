@@ -28,7 +28,8 @@ function Commenter() {
     <div className="commenter-wrapper">
       <div className="comments-list">
         {comments.map((comment, index) => (
-          <p key={index} className="comment" dangerouslySetInnerHTML={{ __html: comment }} >
+          <p key={index} className="comment">
+            {comment}
           </p>
         ))}
         {toggleRef && <div ref={commentsEndRef} />}
